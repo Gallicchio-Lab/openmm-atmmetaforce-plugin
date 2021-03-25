@@ -1,0 +1,6 @@
+
+#include "OpenCLATMMetaForceKernelSources.h"
+
+using namespace ATMMetaForcePlugin;
+using namespace std;
+

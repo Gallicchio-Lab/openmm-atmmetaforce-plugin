@@ -1,0 +1,21 @@
+#ifndef OPENMM_OPENCLEXAMPLEKERNELSOURCES_H_
+#define OPENMM_OPENCLEXAMPLEKERNELSOURCES_H_
+
+#include <string>
+
+namespace ATMMetaForcePlugin {
+
+/**
+ * This class is a central holding place for the source code of OpenCL kernels.
+ * The CMake build script inserts declarations into it based on the .cl files in the
+ * kernels subfolder.
+ */
+
+class OpenCLATMMetaForceKernelSources {
+public:
+@CL_FILE_DECLARATIONS@
+};
+
+} // namespace ATMMetaForcePlugin
+
+#endif /*OPENMM_OPENCLEXAMPLEKERNELSOURCES_H_*/
