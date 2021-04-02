@@ -62,5 +62,5 @@ Edit `runopenmm` to reflect your installation and execution environment. Then:
 ./runopenmm test_explicit.py
 ```
 
-Both produce a short MD run for a host-guest system at the intermediate state at λ=1/2. The first is in vacuum and the second with explicit solvent.
+Both tests produce a short MD run for a host-guest system at the intermediate state at λ=1/2. The first is in vacuum and the second with explicit solvent.
 
