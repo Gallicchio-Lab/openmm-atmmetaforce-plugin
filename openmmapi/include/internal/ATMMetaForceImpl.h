@@ -48,6 +48,7 @@ private:
     OpenMM::VerletIntegrator innerIntegrator1, innerIntegrator2;
     OpenMM::Context *innerContext1, *innerContext2;
     double PerturbationEnergy;
+    bool hasInitializedInnerContexts;
 };
 
 } // namespace ATMMetaPlugin

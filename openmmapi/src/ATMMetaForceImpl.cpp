@@ -23,12 +23,47 @@ using namespace ATMMetaForcePlugin;
 using namespace OpenMM;
 using namespace std;
 
-ATMMetaForceImpl::ATMMetaForceImpl(const ATMMetaForce& owner) : owner(owner), innerIntegrator1(1.0), innerIntegrator2(1.0){
+ATMMetaForceImpl::ATMMetaForceImpl(const ATMMetaForce& owner) : owner(owner), innerIntegrator1(1.0), innerIntegrator2(1.0), hasInitializedInnerContexts(false){
 }
 
 ATMMetaForceImpl::~ATMMetaForceImpl() {
 }
 
+static void copysystem(const OpenMM::System& system, OpenMM::System& innerSystem){
+  
+  //copy particles
+  for (int i = 0; i < system.getNumParticles(); i++) 
+    innerSystem.addParticle(system.getParticleMass(i));
+
+  //copy constraints
+  for (int i = 0; i < system.getNumConstraints(); i++) {
+    int particle1, particle2;
+    double distance;
+    system.getConstraintParameters(i, particle1, particle2, distance);
+    innerSystem.addConstraint(particle1, particle2, distance);
+  }
+
+  Vec3 a, b, c;
+  system.getDefaultPeriodicBoxVectors(a, b, c);
+  innerSystem.setDefaultPeriodicBoxVectors(a, b, c);
+  
+  //add non-bonded force
+  int numforces = system.getNumForces();
+  for (int i=0; i<numforces; i++){
+    const Force &force = system.getForce(i);
+    int group = force.getForceGroup();
+    if(group == 2){//non-bonded
+      Force* newnbforce = XmlSerializer::clone<Force>(force);
+      newnbforce->setForceGroup(group);
+      NonbondedForce* nonbonded = dynamic_cast<NonbondedForce*>(newnbforce);
+      if (nonbonded != NULL)
+	nonbonded->setReciprocalSpaceForceGroup(-1);
+      innerSystem.addForce(newnbforce);
+    }
+  }
+
+}
+  
 void ATMMetaForceImpl::initialize(ContextImpl& context) {
   const OpenMM::System& system = context.getSystem();
 
@@ -41,48 +76,27 @@ void ATMMetaForceImpl::initialize(ContextImpl& context) {
     }
   }
 
+  copysystem(system, innerSystem1);
+  copysystem(system, innerSystem2);
 
-  // Construct the inner systems and contexts to evaluate the displaced non-bonded forces (group 2)
-  //   adapted from customCVForce
-  for (int i = 0; i < system.getNumParticles(); i++) 
-    innerSystem1.addParticle(system.getParticleMass(i));
-  for (int i=0; i<numforces; i++){
-    const Force &force = system.getForce(i);
-    int group = force.getForceGroup();
-    if(group == 2){//non-bonded
-      Force* newnbforce = XmlSerializer::clone<Force>(force);
-      newnbforce->setForceGroup(group);
-      NonbondedForce* nonbonded = dynamic_cast<NonbondedForce*>(newnbforce);
-      if (nonbonded != NULL)
-	nonbonded->setReciprocalSpaceForceGroup(-1);
-      innerSystem1.addForce(newnbforce);
-    }
-  }
-  for (int i = 0; i < system.getNumParticles(); i++) 
-    innerSystem2.addParticle(system.getParticleMass(i));
-  for (int i=0; i<numforces; i++){
-    const Force &force = system.getForce(i);
-    int group = force.getForceGroup();
-    if(group == 2){//non-bonded
-      Force* newnbforce = XmlSerializer::clone<Force>(force);
-      newnbforce->setForceGroup(group);
-      NonbondedForce* nonbonded = dynamic_cast<NonbondedForce*>(newnbforce);
-      if (nonbonded != NULL)
-	nonbonded->setReciprocalSpaceForceGroup(-1);
-      innerSystem2.addForce(newnbforce);
-    }
-  }
-  innerContext1 = context.createLinkedContext(innerSystem1, innerIntegrator1);
-  innerContext2 = context.createLinkedContext(innerSystem2, innerIntegrator2); 
-  vector<Vec3> zerovecs(system.getNumParticles(), OpenMM::Vec3()); 
-  innerContext1->setPositions(zerovecs);
-  innerContext2->setPositions(zerovecs);
-    
   kernel = context.getPlatform().createKernel(CalcATMMetaForceKernel::Name(), context);
   kernel.getAs<CalcATMMetaForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double ATMMetaForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+  if(! hasInitializedInnerContexts) {
+    hasInitializedInnerContexts = true;
+    
+    innerContext1 = context.createLinkedContext(innerSystem1, innerIntegrator1);
+    innerContext2 = context.createLinkedContext(innerSystem2, innerIntegrator2);
+
+    vector<Vec3> pos;
+    context.getPositions(pos);
+    innerContext1->setPositions(pos);
+    innerContext2->setPositions(pos);
+  }
+
+  
   if ((groups&(1<<owner.getForceGroup())) == 0) return 0.0;
   
   bool do_energy = true;

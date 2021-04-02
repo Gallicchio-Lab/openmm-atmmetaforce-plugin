@@ -95,7 +95,7 @@ public:
      * your force.
      */
     bool usesPeriodicBoundaryConditions() const {
-      return false; //TODO
+      return false; //the non-bonded force with PBC is in the system so it would be queried correctly
     }
 
   /**

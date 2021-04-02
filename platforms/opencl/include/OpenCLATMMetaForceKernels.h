@@ -57,6 +57,9 @@ public:
     }
     
 private:
+    class ForceInfo;
+    class ReorderListener;
+    
     void initkernels(OpenMM::ContextImpl& context, OpenMM::ContextImpl& innerContext1, OpenMM::ContextImpl& innerContext2);
     
     bool hasInitializedKernel;
@@ -64,6 +67,10 @@ private:
     const OpenMM::System& system;
     
     OpenMM::OpenCLArray* displ;
+    OpenMM::OpenCLArray* invAtomOrder;
+    OpenMM::OpenCLArray* invAtomOrder1;
+    OpenMM::OpenCLArray* invAtomOrder2;
+
     cl::Kernel CopyStateKernel;
     cl::Kernel HybridForceKernel;
 
