@@ -22,5 +22,45 @@ OpenMM 7.5.0 or later. Tested with OpenMM 7.5.0.
 
 This software is released under the LGPL license. See LICENSE.
 
+## Installation
 
+Locate the OpenMM installation directory, otherwise it will default to `/usr/local/openmm`. See above regarding patching OpenMM's desmond file reader.
+
+Download this package from github:
+
+```
+git clone https://github.com/Gallicchio-Lab/openmm-atmmetaforce-plugin.git
+```
+
+
+Build and install the plugin with cmake. Assuming a unix system:
+
+```
+mkdir build_openmm_sdm_plugin
+cd build_openmm_sdm_plugin
+ccmake -i ../openmm_sdm_plugin
+```
+
+Hit `c` (configure) until all variables are correctly set, then `g` to generate the makefiles. `OPENMM_DIR` should point to an existing OpenMM installation. `CMAKE_INSTALL_PREFIX` normally is the same as `OPENMM_DIR`. The SDM plugin requires the python API. You need `python` and `swig` to install it.
+
+Once the configuration is done do:
+
+```
+make
+make install
+make PythonInstall
+```
+
+The last two steps may need superuser access depending on the installation target. It is recommended to to build the plugin under a `conda` environment to install the python modules without superuser access.
+
+## Test
+
+Edit `runopenmm` to reflect your installation and execution environment. Then:
+
+```
+./runopenmm test.py
+./runopenmm test_explicit.py
+```
+
+Both produce a short MD run for a host-guest system at the intermediate state at λ=1/2. The first is in vacuum and the second with explicit solvent.
 
