@@ -18,7 +18,9 @@ Support from the National Science Foundation [CAREER 1750511](https://www.nsf.go
 
 ## Requirements
 
-OpenMM 7.5.0 or later. Tested with OpenMM 7.5.0.
+OpenMM 7.5.0 or later. Tested with OpenMM 7.5.0. 
+
+Only the Reference and OpenCL platforms are currently supported. CUDA support will be added in the near future through OpenMM's Common Compute platform.
 
 ## License
 
