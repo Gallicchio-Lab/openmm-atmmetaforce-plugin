@@ -38,9 +38,9 @@ git clone https://github.com/Gallicchio-Lab/openmm-atmmetaforce-plugin.git
 Build and install the plugin with cmake. Assuming a unix system:
 
 ```
-mkdir build_openmm_sdm_plugin
-cd build_openmm_sdm_plugin
-ccmake -i ../openmm_sdm_plugin
+mkdir build_openmm_atmplugin
+cd build_openmm_atmplugin
+ccmake -i ../openmm-atmmetaforce-plugin
 ```
 
 Hit `c` (configure) until all variables are correctly set, then `g` to generate the makefiles. `OPENMM_DIR` should point to an existing OpenMM installation. `CMAKE_INSTALL_PREFIX` normally is the same as `OPENMM_DIR`. The SDM plugin requires the python API. You need `python` and `swig` to install it.
