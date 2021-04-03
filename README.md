@@ -11,7 +11,7 @@ The plugin interface is based on the [openmmexampleplugin](https://github.com/pe
 
 The design of the Meta-Force is based on the implementation of OpenMM's CustomCVForce by Peter Eastman. Peter Eastman also guided much of the developement of this plugin. See OpenMM's issue [#3045](https://github.com/openmm/openmm/issues/3045) for an account.
 
-This implementation is essentially a Force-based port of the Integrator-based approach in the [openmm_sdm_plugin](https://github.com/rajatkrpal/openmm_sdm_plugin) by Rakat K. Pal and others.
+This implementation is essentially a Force-based port of the Integrator-based approach of the [openmm_sdm_plugin](https://github.com/rajatkrpal/openmm_sdm_plugin) by Rakat K. Pal and others.
 
 Support from the National Science Foundation [CAREER 1750511](https://www.nsf.gov/awardsearch/showAward?AWD_ID=1750511&HistoricalAwards=false) is gratefully acknowledged. 
 
