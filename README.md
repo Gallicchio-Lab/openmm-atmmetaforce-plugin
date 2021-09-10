@@ -2,6 +2,7 @@
 An OpenMM plugin that implements the Alchemical Transfer Potential (ATM)
 
 [Alchemical Transfer Approach to Absolute Binding Free Energy Estimation.  J. Chem. Theory and Comput. 17, 3306 (2021)](https://doi.org/10.1021/acs.jctc.1c00266)
+
 [Relative Binding Free Energy Calculations for Ligands with Diverse Scaffolds with the Alchemical Transfer Method. ArXiv Preprint 2107.05153 (2021)](https://arxiv.org/abs/2107.05153)
 
 ## Credits
@@ -10,7 +11,7 @@ This software is written and maintained by Emilio Gallicchio <egallicchio@brookl
 
 The plugin interface is based on the [openmmexampleplugin](https://github.com/peastman/openmmexampleplugin) by Peter Eastman.
 
-The design of the Meta-Force is based on the implementation of OpenMM's CustomCVForce by Peter Eastman. Peter Eastman also guided much of the developement of this plugin. See OpenMM's issue [#3045](https://github.com/openmm/openmm/issues/3045) for an account.
+The design of the Meta-Force is based on the implementation of OpenMM's CustomCVForce by Peter Eastman. Peter Eastman also guided much of the development of this plugin. See OpenMM's issue [#3045](https://github.com/openmm/openmm/issues/3045) for an account.
 
 This implementation is essentially a Force-based port of the Integrator-based approach of the [openmm_sdm_plugin](https://github.com/rajatkrpal/openmm_sdm_plugin) by Rakat K. Pal and others.
 
@@ -56,7 +57,7 @@ make install
 make PythonInstall
 ```
 
-The last two steps may need superuser access depending on the installation target. It is recommended to to build the plugin under a `conda` environment to install the python modules without superuser access.
+The last two steps may need superuser access depending on the installation target. It is recommended to build the plugin under a `conda` environment to install the python modules without superuser access.
 
 ## Test
 
