@@ -1,7 +1,8 @@
 # Alchemical Transfer Method Meta-Force OpenMM Plugin
 An OpenMM plugin that implements the Alchemical Transfer Potential (ATM)
 
-[Alchemical Transfer Approach to Absolute Binding Free Energy Estimation. arXiv:2101.07894 (2021)](https://arxiv.org/abs/2101.07894)
+[Alchemical Transfer Approach to Absolute Binding Free Energy Estimation.  J. Chem. Theory and Comput. 17, 3306 (2021)](https://doi.org/10.1021/acs.jctc.1c00266)
+[Relative Binding Free Energy Calculations for Ligands with Diverse Scaffolds with the Alchemical Transfer Method. ArXiv Preprint 2107.05153 (2021)](https://arxiv.org/abs/2107.05153)
 
 ## Credits
 
