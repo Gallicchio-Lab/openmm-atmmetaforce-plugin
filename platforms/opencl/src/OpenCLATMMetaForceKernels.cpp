@@ -65,6 +65,10 @@ public:
             invOrder[order[i]] = i;
         invAtomOrder->upload(invOrder);
 
+	//force atom reordering of the inner contexts
+	cl1.setStepsSinceReorder(99999);
+	cl2.setStepsSinceReorder(99999);
+
 	cl1.reorderAtoms();
 	const vector<int>& order1 = cl1.getAtomIndex();
         for (int i = 0; i < order1.size(); i++)
