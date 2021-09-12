@@ -174,11 +174,11 @@ for i in lig1_atoms:
 for i in lig2_atoms:
     atmforce.setParticleParameters(i, i, -displ[0] * angstrom, -displ[1] * angstrom, -displ[2] * angstrom)
 
-atmforce.setLambda1(lambda1);
-atmforce.setLambda2(lambda2);
-atmforce.setUmax(umsc/kilojoules_per_mole);
-atmforce.setUbcore(ubcore/kilojoules_per_mole);
-atmforce.setAcore(acore);
+atmforce.setLambda1(lambda1)
+atmforce.setLambda2(lambda2)
+atmforce.setUmax(umsc/kilojoules_per_mole)
+atmforce.setUbcore(ubcore/kilojoules_per_mole)
+atmforce.setAcore(acore)
     
 atmforce.setForceGroup(3)
 
