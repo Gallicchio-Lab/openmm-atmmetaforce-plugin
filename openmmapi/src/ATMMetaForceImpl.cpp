@@ -52,13 +52,16 @@ static void copysystem(const OpenMM::System& system, OpenMM::System& innerSystem
   for (int i=0; i<numforces; i++){
     const Force &force = system.getForce(i);
     int group = force.getForceGroup();
-    if(group == 2){//non-bonded
-      Force* newnbforce = XmlSerializer::clone<Force>(force);
-      newnbforce->setForceGroup(group);
-      NonbondedForce* nonbonded = dynamic_cast<NonbondedForce*>(newnbforce);
+    // add to the inner contexts both bonded (group 1) and non-bonded (group 2) forces
+    // the bonded forces are not calculated but they are included to help define molecules
+    // for atom reordering
+    if(group == 1 || group == 2){
+      Force* newforce = XmlSerializer::clone<Force>(force);
+      newforce->setForceGroup(group);
+      NonbondedForce* nonbonded = dynamic_cast<NonbondedForce*>(newforce);
       if (nonbonded != NULL)
 	nonbonded->setReciprocalSpaceForceGroup(-1);
-      innerSystem.addForce(newnbforce);
+      innerSystem.addForce(newforce);
     }
   }
 
