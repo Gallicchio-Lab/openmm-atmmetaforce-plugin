@@ -3,7 +3,10 @@
 
 #include "ATMMetaForceKernels.h"
 #include "openmm/opencl/OpenCLContext.h"
+#include "openmm/internal/ContextImpl.h"
 #include "openmm/opencl/OpenCLArray.h"
+
+using namespace OpenMM;
 
 namespace ATMMetaForcePlugin {
 
@@ -65,12 +68,10 @@ private:
     bool hasInitializedKernel;
     OpenMM::OpenCLContext& cl;
     const OpenMM::System& system;
+
+    std::vector<mm_float4> displVector;
     
     OpenMM::OpenCLArray* displ;
-    OpenMM::OpenCLArray* invAtomOrder;
-    OpenMM::OpenCLArray* invAtomOrder1;
-    OpenMM::OpenCLArray* invAtomOrder2;
-
     cl::Kernel CopyStateKernel;
     cl::Kernel HybridForceKernel;
 

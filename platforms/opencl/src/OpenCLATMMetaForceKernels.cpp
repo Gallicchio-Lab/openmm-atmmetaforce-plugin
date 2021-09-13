@@ -50,44 +50,26 @@ private:
 
 class OpenCLCalcATMMetaForceKernel::ReorderListener : public OpenCLContext::ReorderListener {
 public:
-  ReorderListener(OpenCLContext&  cl, OpenCLArray* invAtomOrder,
-		  OpenCLContext& cl1, OpenCLArray* invAtomOrder1,
-		  OpenCLContext& cl2, OpenCLArray* invAtomOrder2) :
-    cl(cl), invAtomOrder(invAtomOrder),
-    cl1(cl1), invAtomOrder1(invAtomOrder1),
-    cl2(cl2), invAtomOrder2(invAtomOrder2)  {
+  ReorderListener(OpenCLContext&  cl, OpenCLContext& cl1, OpenCLContext& cl2,
+		  vector<mm_float4>& displVector, OpenCLArray* displ) :
+    cl(cl), cl1(cl1), cl2(cl2), displVector(displVector), displ(displ)  {
     }
     void execute() {
-        vector<cl_int> invOrder(cl.getPaddedNumAtoms());
-	
         const vector<int>& order = cl.getAtomIndex();
-        for (int i = 0; i < order.size(); i++)
-            invOrder[order[i]] = i;
-        invAtomOrder->upload(invOrder);
-
-	//force atom reordering of the inner contexts
-	cl1.setStepsSinceReorder(99999);
-	cl2.setStepsSinceReorder(99999);
-
-	cl1.reorderAtoms();
-	const vector<int>& order1 = cl1.getAtomIndex();
-        for (int i = 0; i < order1.size(); i++)
-            invOrder[order1[i]] = i;
-        invAtomOrder1->upload(invOrder);
-
-	cl2.reorderAtoms();
-	const vector<int>& order2 = cl2.getAtomIndex();
-        for (int i = 0; i < order2.size(); i++)
-            invOrder[order2[i]] = i;
-        invAtomOrder2->upload(invOrder);
+	
+	vector<mm_float4> newDisplVector(cl.getPaddedNumAtoms());
+	for (int i = 0; i < cl.getNumAtoms(); i++){
+	  newDisplVector[i] = displVector[order[i]];
+	}
+	displ->upload(newDisplVector);
     }
 private:
     OpenCLContext& cl;
     OpenCLContext& cl1;
     OpenCLContext& cl2;
-    OpenCLArray* invAtomOrder;
-    OpenCLArray* invAtomOrder1;
-    OpenCLArray* invAtomOrder2;
+    OpenCLArray* displ;
+    std::vector<mm_float4> displVector;
+  
   
 };
 
@@ -100,7 +82,8 @@ void OpenCLCalcATMMetaForceKernel::initialize(const System& system, const ATMMet
   numParticles = force.getNumParticles();
   if (numParticles == 0)
     return;
-  vector<mm_float4> displVector(cl.getPaddedNumAtoms());
+  //vector<mm_float4> displVector(cl.getPaddedNumAtoms());
+  displVector.resize(cl.getPaddedNumAtoms());
   for (int i = 0; i < cl.getPaddedNumAtoms(); i++){
     displVector[i].x = 0;
     displVector[i].y = 0;
@@ -143,14 +126,8 @@ void OpenCLCalcATMMetaForceKernel::initkernels(OpenMM::ContextImpl& context, Ope
     OpenCLContext& cl1 = *reinterpret_cast<OpenCLPlatform::PlatformData*>(innerContext1.getPlatformData())->contexts[0];
     OpenCLContext& cl2 = *reinterpret_cast<OpenCLPlatform::PlatformData*>(innerContext2.getPlatformData())->contexts[0];
 
-    //buffers that map from system's atom indexes to context atom indexes
-    invAtomOrder = OpenCLArray::create<cl_int>(cl, cl.getPaddedNumAtoms(), "invAtomOrder");
-    invAtomOrder1 = OpenCLArray::create<cl_int>(cl, cl.getPaddedNumAtoms(), "invAtomOrder1");
-    invAtomOrder2 = OpenCLArray::create<cl_int>(cl, cl.getPaddedNumAtoms(), "invAtomOrder2");
-    
-    //initialize the listener, this recalculate the inverse atom maps (system's atom index to context atom index)
-    //when equivalent atoms are reordered
-    ReorderListener* listener = new ReorderListener(cl, invAtomOrder, cl1, invAtomOrder1, cl2, invAtomOrder2 );
+    //initialize the listener, this reorders the displacement vectors
+    ReorderListener* listener = new ReorderListener(cl, cl1, cl2, displVector, displ );
     cl.addReorderListener(listener);
     listener->execute();
 
@@ -162,9 +139,6 @@ void OpenCLCalcATMMetaForceKernel::initkernels(OpenMM::ContextImpl& context, Ope
     CopyStateKernel.setArg<cl::Buffer>(2, cl1.getPosq().getDeviceBuffer());
     CopyStateKernel.setArg<cl::Buffer>(3, cl2.getPosq().getDeviceBuffer());
     CopyStateKernel.setArg<cl::Buffer>(4, displ->getDeviceBuffer());
-    CopyStateKernel.setArg<cl::Buffer>(5, cl.getAtomIndexArray().getDeviceBuffer());
-    CopyStateKernel.setArg<cl::Buffer>(6, invAtomOrder1->getDeviceBuffer());
-    CopyStateKernel.setArg<cl::Buffer>(7, invAtomOrder2->getDeviceBuffer());
 
     //create the HybridForce kernel
     HybridForceKernel = cl::Kernel(program, "HybridForce");
@@ -173,9 +147,6 @@ void OpenCLCalcATMMetaForceKernel::initkernels(OpenMM::ContextImpl& context, Ope
     HybridForceKernel.setArg<cl::Buffer>(2, cl1.getForce().getDeviceBuffer());
     HybridForceKernel.setArg<cl::Buffer>(3, cl2.getForce().getDeviceBuffer());
     //there is a 4th argument (sp) which is added in execute()
-    HybridForceKernel.setArg<cl::Buffer>(5, cl.getAtomIndexArray().getDeviceBuffer());
-    HybridForceKernel.setArg<cl::Buffer>(6, invAtomOrder1->getDeviceBuffer());
-    HybridForceKernel.setArg<cl::Buffer>(7, invAtomOrder2->getDeviceBuffer());
 
     cl1.addForce(new OpenCLForceInfo(1));
     cl2.addForce(new OpenCLForceInfo(1));
