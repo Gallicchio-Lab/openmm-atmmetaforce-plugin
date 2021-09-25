@@ -50,23 +50,19 @@ private:
 
 class OpenCLCalcATMMetaForceKernel::ReorderListener : public OpenCLContext::ReorderListener {
 public:
-  ReorderListener(OpenCLContext&  cl, OpenCLContext& cl1, OpenCLContext& cl2,
-		  vector<mm_float4>& displVector, OpenCLArray* displ) :
-    cl(cl), cl1(cl1), cl2(cl2), displVector(displVector), displ(displ)  {
+  ReorderListener(OpenCLContext&  cl, vector<mm_float4>& displVector, OpenCLArray* displ) :
+    cl(cl), displVector(displVector), displ(displ)  {
     }
     void execute() {
-        const vector<int>& order = cl.getAtomIndex();
-	
-	vector<mm_float4> newDisplVector(cl.getPaddedNumAtoms());
+        const vector<int>& id = cl.getAtomIndex();
+	vector<mm_float4> newDisplVectorContext(cl.getPaddedNumAtoms());
 	for (int i = 0; i < cl.getNumAtoms(); i++){
-	  newDisplVector[i] = displVector[order[i]];
+	  newDisplVectorContext[i] = displVector[id[i]];
 	}
-	displ->upload(newDisplVector);
+	displ->upload(newDisplVectorContext);
     }
 private:
     OpenCLContext& cl;
-    OpenCLContext& cl1;
-    OpenCLContext& cl2;
     OpenCLArray* displ;
     std::vector<mm_float4> displVector;
   
@@ -82,13 +78,13 @@ void OpenCLCalcATMMetaForceKernel::initialize(const System& system, const ATMMet
   numParticles = force.getNumParticles();
   if (numParticles == 0)
     return;
-  //vector<mm_float4> displVector(cl.getPaddedNumAtoms());
   displVector.resize(cl.getPaddedNumAtoms());
+  vector<mm_float4> displVectorContext(cl.getPaddedNumAtoms());
   for (int i = 0; i < cl.getPaddedNumAtoms(); i++){
-    displVector[i].x = 0;
-    displVector[i].y = 0;
-    displVector[i].z = 0;
-    displVector[i].w = 0;
+    displVector[i].x = displVectorContext[i].x = 0;
+    displVector[i].y = displVectorContext[i].y = 0;
+    displVector[i].z = displVectorContext[i].z = 0;
+    displVector[i].w = displVectorContext[i].w = 0;
   }
   for (int i = 0; i < numParticles; i++){
     int particle;
@@ -99,8 +95,12 @@ void OpenCLCalcATMMetaForceKernel::initialize(const System& system, const ATMMet
     displVector[i].z = dz;
     displVector[i].w = 0;
   }
+  const vector<int>& id = cl.getAtomIndex();
+  for (int i = 0; i < numParticles; i++){
+    displVectorContext[i] = displVector[id[i]];
+  }
   displ = OpenCLArray::create<mm_float4>(cl, cl.getPaddedNumAtoms(), "displ");
-  displ->upload(displVector);
+  displ->upload(displVectorContext);
 
   cl.addForce(new OpenCLForceInfo(1));
 }
@@ -114,7 +114,7 @@ void OpenCLCalcATMMetaForceKernel::initkernels(OpenMM::ContextImpl& context, Ope
     OpenCLContext& cl2 = *reinterpret_cast<OpenCLPlatform::PlatformData*>(innerContext2.getPlatformData())->contexts[0];
 
     //initialize the listener, this reorders the displacement vectors
-    ReorderListener* listener = new ReorderListener(cl, cl1, cl2, displVector, displ );
+    ReorderListener* listener = new ReorderListener(cl, displVector, displ );
     cl.addReorderListener(listener);
     listener->execute();
 
@@ -203,10 +203,7 @@ void OpenCLCalcATMMetaForceKernel::copyState(OpenMM::ContextImpl& context,
 
 
 void OpenCLCalcATMMetaForceKernel::copyParametersToContext(ContextImpl& context, const ATMMetaForce& force) {
-  //if (force.getNumParticles() != particles.size())
-  //      throw OpenMMException("copyParametersToContext: The number of ATMMetaForce particles has changed");
   OpenCLContext& cl = *reinterpret_cast<OpenCLPlatform::PlatformData*>(context.getPlatformData())->contexts[0];
-  vector<mm_float4> displVector(cl.getPaddedNumAtoms());
   for (int i = 0; i < numParticles; i++){
     int particle;
     double dx, dy, dz;
@@ -216,4 +213,10 @@ void OpenCLCalcATMMetaForceKernel::copyParametersToContext(ContextImpl& context,
     displVector[i].z = dz;
     displVector[i].w = 0;
   }
+  const vector<int>& id = cl.getAtomIndex();
+  vector<mm_float4> displVectorContext(displVector);
+  for (int i = 0; i < numParticles; i++){
+    displVectorContext[i] = displVector[id[i]];
+  }
+  displ->upload(displVectorContext);
 }

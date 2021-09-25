@@ -69,6 +69,7 @@ private:
     OpenMM::OpenCLContext& cl;
     const OpenMM::System& system;
 
+    //a copy of the displacement vectors stored in the force
     std::vector<mm_float4> displVector;
     
     OpenMM::OpenCLArray* displ;
