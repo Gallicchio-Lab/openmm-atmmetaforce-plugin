@@ -4,7 +4,14 @@ class ATMMetaForceUtils(object):
 
     def __init__(self, system):
         self.system = system
-        self.force = None
+        #place all existing forces in group 1, except for the non-bonded forces that go in group 2
+        import re
+        nbpattern = re.compile(".*Nonbonded.*")
+        for force in system.getForces():
+            if nbpattern.match(str(type(force))):
+                force.setForceGroup(2)
+            else:
+                force.setForceGroup(1)
 
     def _setRcptReferenceParticles(self, rcpt_ref_particles):
         if len(rcpt_ref_particles) != 3:
@@ -74,44 +81,44 @@ class ATMMetaForceUtils(object):
         expr += "pi = %f" % math.pi
 
         if do_angles:
-            self.force =  mm.CustomCentroidBondForce(8,expr)
+            force =  mm.CustomCentroidBondForce(8,expr)
         else:
-            self.force =  mm.CustomCentroidBondForce(2,expr)
+            force =  mm.CustomCentroidBondForce(2,expr)
 
-        self.system.addForce(self.force)
+        self.system.addForce(force)
 
-        self.force.setForceGroup(1) #the restraint force will be evaluated separately
+        force.setForceGroup(1) #the restraint force will be evaluated separately
 
-        self.force.addPerBondParameter("kfcm")
-        self.force.addPerBondParameter("tolcm")
-        self.force.addPerBondParameter("offx")
-        self.force.addPerBondParameter("offy")
-        self.force.addPerBondParameter("offz")
+        force.addPerBondParameter("kfcm")
+        force.addPerBondParameter("tolcm")
+        force.addPerBondParameter("offx")
+        force.addPerBondParameter("offy")
+        force.addPerBondParameter("offz")
 
-        self.force.addGroup(lig_cm_particles) #g1 CM of lig
-        self.force.addGroup(rcpt_cm_particles) #g2 CM of rcpt
+        force.addGroup(lig_cm_particles) #g1 CM of lig
+        force.addGroup(rcpt_cm_particles) #g2 CM of rcpt
 
         if do_angles:
 
-            self.force.addPerBondParameter("kfcd0")
-            self.force.addPerBondParameter("a0")
-            self.force.addPerBondParameter("b0")
+            force.addPerBondParameter("kfcd0")
+            force.addPerBondParameter("a0")
+            force.addPerBondParameter("b0")
 
-            self.force.addPerBondParameter("kfcd1")
-            self.force.addPerBondParameter("a1")
-            self.force.addPerBondParameter("b1")
+            force.addPerBondParameter("kfcd1")
+            force.addPerBondParameter("a1")
+            force.addPerBondParameter("b1")
 
-            self.force.addPerBondParameter("kfcd2")
-            self.force.addPerBondParameter("a2")
-            self.force.addPerBondParameter("b2")
+            force.addPerBondParameter("kfcd2")
+            force.addPerBondParameter("a2")
+            force.addPerBondParameter("b2")
 
-            self.force.addGroup([rcpt_ref_particles[0]]) #g3 rcpt ref 0 
-            self.force.addGroup([rcpt_ref_particles[1]]) #g4 rcpt ref 1
-            self.force.addGroup([rcpt_ref_particles[2]]) #g5 rcpt ref 2
+            force.addGroup([rcpt_ref_particles[0]]) #g3 rcpt ref 0
+            force.addGroup([rcpt_ref_particles[1]]) #g4 rcpt ref 1
+            force.addGroup([rcpt_ref_particles[2]]) #g5 rcpt ref 2
 
-            self.force.addGroup([lig_ref_particles[0]]) #g6 lig ref 0 
-            self.force.addGroup([lig_ref_particles[1]]) #g7 lig ref 1
-            self.force.addGroup([lig_ref_particles[2]]) #g8 lig ref 2
+            force.addGroup([lig_ref_particles[0]]) #g6 lig ref 0
+            force.addGroup([lig_ref_particles[1]]) #g7 lig ref 1
+            force.addGroup([lig_ref_particles[2]]) #g8 lig ref 2
 
         kfc = kfcm / (kilojoule_per_mole/radians**2)
         tolc = tolcm / nanometer
@@ -140,7 +147,7 @@ class ATMMetaForceUtils(object):
             groups = [0,1]
             params = [kfc, tolc, offx, offy, offz]
 
-        self.force.addBond(groups, params)
+        force.addBond(groups, params)
 
 
     # a force to keep two ligands aligned
@@ -237,4 +244,28 @@ class ATMMetaForceUtils(object):
                            [kpsi/kilojoule_per_mole])
         psiforce.setForceGroup(1)
 
+    # applies flat-bottom restraints to a set of atoms based on a set of reference positions
+    def addPosRestraints(self, particles, refpos, fc = 25.0 * kilocalorie_per_mole/angstrom**2, tol = 0.5 * angstrom, periodic = True):
+        if not particles or len(particles) == 0:
+            return
+        if periodic:
+            posrestforce = mm.CustomExternalForce("0.5*fc*select(step(dist-tol), (dist-tol)^2, 0); dist = periodicdistance(x,y,z,x0,y0,z0)")
+        else:
+            posrestforce = mm.CustomExternalForce("0.5*fc*select(step(dist-tol), (dist-tol)^2, 0); dist = sqrt((x-x0)^2+(y-y0)^2+(z-z0)^2)")
+
+        posrestforce.addPerParticleParameter("x0")
+        posrestforce.addPerParticleParameter("y0")
+        posrestforce.addPerParticleParameter("z0")
+        posrestforce.addPerParticleParameter("fc")
+        posrestforce.addPerParticleParameter("tol")
+
+        posrestforce.setForceGroup(1)
+
+        self.system.addForce(posrestforce)
+
+        for p in particles:
+            x0 = refpos[p][0]
+            y0 = refpos[p][1]
+            z0 = refpos[p][2]
+            posrestforce.addParticle(p, [x0, y0, z0, fc, tol])
 %}
