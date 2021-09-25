@@ -1,4 +1,4 @@
-
+#include "ATMMetaForce.h"
 #include "OpenCLATMMetaForceKernels.h"
 #include "OpenCLATMMetaForceKernelSources.h"
 #include "openmm/internal/ContextImpl.h"
@@ -102,19 +102,6 @@ void OpenCLCalcATMMetaForceKernel::initialize(const System& system, const ATMMet
   displ = OpenCLArray::create<mm_float4>(cl, cl.getPaddedNumAtoms(), "displ");
   displ->upload(displVector);
 
-
-  //soft core parameters
-  umax = force.getUmax();
-  acore = force.getAcore();
-  ubcore = force.getUbcore();
-
-  //softplus parameters
-  lambda1 = force.getLambda1();
-  lambda2 = force.getLambda2();
-  alpha = force.getAlpha();
-  u0 = force.getU0();
-  w0 = force.getW0();
-
   cl.addForce(new OpenCLForceInfo(1));
 }
 
@@ -158,6 +145,18 @@ double OpenCLCalcATMMetaForceKernel::execute(OpenMM::ContextImpl& context,
 					     double State1Energy, double State2Energy,
 					     bool includeForces, bool includeEnergy ) {
   initkernels(context, innerContext1, innerContext2);
+
+  //softplus parameters
+  double lambda1 = context.getParameter(ATMMetaForce::Lambda1());
+  double lambda2 = context.getParameter(ATMMetaForce::Lambda2());
+  double alpha   = context.getParameter(ATMMetaForce::Alpha());
+  double u0      = context.getParameter(ATMMetaForce::U0());
+  double w0      = context.getParameter(ATMMetaForce::W0());
+
+  //softcore parameters
+  double umax = context.getParameter(ATMMetaForce::Umax());
+  double ubcore = context.getParameter(ATMMetaForce::Ubcore());
+  double acore = context.getParameter(ATMMetaForce::Acore());
 
   //soft-core perturbation energy
   double fp;
@@ -217,16 +216,4 @@ void OpenCLCalcATMMetaForceKernel::copyParametersToContext(ContextImpl& context,
     displVector[i].z = dz;
     displVector[i].w = 0;
   }
-  
-  //soft core parameters
-  umax = force.getUmax();
-  acore = force.getAcore();
-  ubcore = force.getUbcore();
-
-  //softplus parameters
-  lambda1 = force.getLambda1();
-  lambda2 = force.getLambda2();
-  alpha = force.getAlpha();
-  u0 = force.getU0();
-  w0 = force.getW0();
 }

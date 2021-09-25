@@ -127,6 +127,20 @@ double ATMMetaForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeF
   return (includeEnergy ? energy : 0.0);
 }
 
+std::map<std::string, double> ATMMetaForceImpl::getDefaultParameters(){
+  std::map<std::string, double> parameters;
+  parameters[ATMMetaForce::Lambda1()] = getOwner().getDefaultLambda1();
+  parameters[ATMMetaForce::Lambda2()] = getOwner().getDefaultLambda2();
+  parameters[ATMMetaForce::Alpha()]   = getOwner().getDefaultAlpha();
+  parameters[ATMMetaForce::U0()]      = getOwner().getDefaultU0();
+  parameters[ATMMetaForce::W0()]      = getOwner().getDefaultW0();
+  parameters[ATMMetaForce::Umax()]    = getOwner().getDefaultUmax();
+  parameters[ATMMetaForce::Ubcore()]  = getOwner().getDefaultUbcore();
+  parameters[ATMMetaForce::Acore()]   = getOwner().getDefaultAcore();
+  return parameters;
+}
+
+
 std::vector<std::string> ATMMetaForceImpl::getKernelNames() {
     std::vector<std::string> names;
     names.push_back(CalcATMMetaForceKernel::Name());

@@ -9,20 +9,6 @@ using namespace ATMMetaForcePlugin;
 using namespace OpenMM;
 using namespace std;
 
-ATMMetaForce::ATMMetaForce() {
-
-  //default values for soft-plus potential
-  lambda1 = lambda2 = 1.0;
-  alpha = 1.0;
-  u0 = 0.0;
-
-  //default values for the soft-core function
-  umax = 200.0;
-  acore = 0.25;
-  ubcore = 0.0;
-  
-}
-
 int ATMMetaForce::addParticle(int particle, double dx, double dy, double dz) {
     particles.push_back(ParticleInfo(particle, dx, dy, dz));
     return particles.size()-1;

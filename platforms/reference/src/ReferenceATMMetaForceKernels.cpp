@@ -50,19 +50,6 @@ void ReferenceCalcATMMetaForceKernel::initialize(const System& system, const ATM
     force.getParticleParameters(i, particles[i], dx, dy, dz);
     displ[i] = OpenMM::Vec3(dx,dy,dz);
   }
-
-  //soft core parameters
-  umax = force.getUmax();
-  acore = force.getAcore();
-  ubcore = force.getUbcore();
-
-  //softplus parameters
-  lambda1 = force.getLambda1();
-  lambda2 = force.getLambda2();
-  alpha = force.getAlpha();
-  u0 = force.getU0();
-  w0 = force.getW0();
-
   
 }
 
@@ -74,6 +61,18 @@ double ReferenceCalcATMMetaForceKernel::execute(ContextImpl& context, ContextImp
     vector<Vec3>& force1 = extractForces(innerContext1);
     vector<Vec3>& force2 = extractForces(innerContext2);
     int numParticles = particles.size();
+
+    //softplus parameters
+    double lambda1 = context.getParameter(ATMMetaForce::Lambda1());
+    double lambda2 = context.getParameter(ATMMetaForce::Lambda2());
+    double alpha   = context.getParameter(ATMMetaForce::Alpha());
+    double u0      = context.getParameter(ATMMetaForce::U0());
+    double w0      = context.getParameter(ATMMetaForce::W0());
+
+    //softcore parameters
+    double umax = context.getParameter(ATMMetaForce::Umax());
+    double ubcore = context.getParameter(ATMMetaForce::Ubcore());
+    double acore = context.getParameter(ATMMetaForce::Acore());
 
     //soft-core perturbation energy
     double fp;
@@ -142,16 +141,4 @@ void ReferenceCalcATMMetaForceKernel::copyParametersToContext(ContextImpl& conte
 	throw OpenMMException("ReferenceCalcATMMetaForceKernel::copyParametersToContext: A particle index has changed");
       displ.push_back(OpenMM::Vec3(dx,dy,dz));
     }
-    
-    //soft core parameters
-    umax = force.getUmax();
-    acore = force.getAcore();
-    ubcore = force.getUbcore();
-
-    //softplus parameters
-    lambda1 = force.getLambda1();
-    lambda2 = force.getLambda2();
-    alpha = force.getAlpha();
-    u0 = force.getU0();
-    w0 = force.getW0();
 }

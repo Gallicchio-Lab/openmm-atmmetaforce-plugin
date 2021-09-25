@@ -40,7 +40,7 @@
 namespace ATMMetaForcePlugin {
 
 /**
- * This class implements ...
+ * This class implements the Alchemical Transfer force
  */
 
 class OPENMM_EXPORT_ATMMETAFORCE ATMMetaForce : public OpenMM::Force {
@@ -48,7 +48,10 @@ public:
     /**
      * Create an ATMMetaForce.
      */
-    ATMMetaForce();
+    ATMMetaForce(double Lambda1, double Lambda2, double Alpha, double U0, double W0, double Umax, double Ubcore, double Acore) :
+     defaultLambda1(Lambda1), defaultLambda2(Lambda2), defaultAlpha(Alpha), defaultU0(U0), defaultW0(W0),
+     defaultUmax(Umax), defaultUbcore(Ubcore), defaultAcore(Acore) {
+     }
     /**
      * Get the number of particles
      */
@@ -105,71 +108,81 @@ public:
 
 
     /**
-     * get/set methods for the softplus alchemical potential function parameters 
+     * Names of the parameters
      */
-    void setLambda1(double lambda1_t) {
-      lambda1 = lambda1_t;
+    static const std::string& Lambda1() {
+        static const std::string key = "ATMLambda1";
+        return key;
     }
-    double getLambda1() const {
-      return lambda1;
+    static const std::string& Lambda2() {
+        static const std::string key = "ATMLambda2";
+        return key;
     }
-    void setLambda2(double lambda2_t) {
-      lambda2 = lambda2_t;
+    static const std::string& Alpha() {
+        static const std::string key = "ATMAlpha";
+        return key;
     }
-    double getLambda2() const {
-      return lambda2;
+    static const std::string& U0() {
+        static const std::string key = "ATMU0";
+        return key;
     }
-    void setAlpha(double alpha_t) { //in 1/kjmol
-      alpha = alpha_t;
+    static const std::string& W0() {
+        static const std::string key = "ATMW0";
+        return key;
     }
-    double getAlpha() const {
-      return alpha;
+    static const std::string& Umax() {
+        static const std::string key = "ATMUmax";
+        return key;
     }
-    void setU0(double u0_t) { //in kjmol
-      u0 = u0_t;
+    static const std::string& Ubcore() {
+        static const std::string key = "ATMUbcore";
+        return key;
     }
-    double getU0() const {
-      return u0;
-    }
-    void setW0(double w0_t){
-      w0 = w0_t;
-    }
-    double getW0() const {
-      return w0;
+    static const std::string& Acore() {
+        static const std::string key = "ATMAcore";
+        return key;
     }
 
+
     /**
-     * get/set methods for the soft-core parameters
+     *  default values of the parameters
      */
-    double getUmax(void) const {
-      return umax;
+    double getDefaultLambda1() const {
+        return defaultLambda1;
     }
-    void setUmax(double um)  {
-      umax = um;
+    double getDefaultLambda2() const {
+        return defaultLambda2;
     }
-    double getAcore(void) const {
-      return acore;
+    double getDefaultAlpha() const {
+        return defaultAlpha;
     }
-    void setAcore(double a)  {
-      acore = a;
+    double getDefaultU0() const {
+        return defaultU0;
     }
-    double getUbcore(void) const {
-      return ubcore;
+    double getDefaultW0() const {
+        return defaultW0;
     }
-    void setUbcore(double ub)  {
-      ubcore = ub;
+    double getDefaultUmax() const {
+        return defaultUmax;
     }
+    double getDefaultUbcore() const {
+        return defaultUbcore;
+    }
+    double getDefaultAcore() const {
+        return defaultAcore;
+    }
+
     
- protected:
+protected:
   OpenMM::ForceImpl* createImpl() const;
 private:
     class ParticleInfo;
     std::vector<ParticleInfo> particles;
 
     //softplus parameters
-    double lambda1, lambda2, alpha, u0, w0;
+    double defaultLambda1, defaultLambda2, defaultAlpha, defaultU0, defaultW0;
     //soft core parameters
-    double umax, acore, ubcore;
+    double defaultUmax, defaultUbcore, defaultAcore;
 };
 
 /**

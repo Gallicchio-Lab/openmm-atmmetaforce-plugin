@@ -62,7 +62,7 @@ namespace ATMMetaForcePlugin {
 
 class ATMMetaForce : public OpenMM::Force {
 public:
-    ATMMetaForce();
+    ATMMetaForce(double Lambda1, double Lambda2, double Alpha, double U0, double W0, double Umax, double Ubcore, double Acore);
 
     int getNumParticles() const;
     int addParticle(int particle, double dx, double dy, double dz);
@@ -85,31 +85,23 @@ public:
 
     double getPerturbationEnergy(OpenMM::Context& context) const;
 
-    /**
-     * get/set methods for the softplus alchemical potential function 
-     * TODO: add units to alpha, U0, and W0
-     */
-    void setLambda1(double lambda1_t);
-    double getLambda1() const;
-    void setLambda2(double lambda2_t);
-    double getLambda2() const;
-    void setAlpha(double alpha_t);
-    double getAlpha() const;
-    void setU0(double u0_t);
-    double getU0() const;
-    void setW0(double w0_t);
-    double getW0() const ;
+    static const std::string& Lambda1();
+    static const std::string& Lambda2();
+    static const std::string& Alpha();
+    static const std::string& U0();
+    static const std::string& W0();
+    static const std::string& Umax();
+    static const std::string& Ubcore();
+    static const std::string& Acore();
 
-    /**
-     * get/set methods for the soft-core parameters
-     * TODO: add units to Umax and Ubcore
-     */
-    double getUmax(void) const;
-    void setUmax(double um);
-    double getAcore(void) const;
-    void setAcore(double a);
-    double getUbcore(void) const;
-    void setUbcore(double ub);    
+    double getDefaultLambda1() const;
+    double getDefaultLambda2() const;
+    double getDefaultAlpha() const;
+    double getDefaultU0() const;
+    double getDefaultW0() const;
+    double getDefaultUmax() const;
+    double getDefaultUbcore() const;
+    double getDefaultAcore() const;
 
     /*
      * Add methods for casting a Force to an ATMMetaForce.

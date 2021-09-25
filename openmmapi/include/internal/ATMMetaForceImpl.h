@@ -33,9 +33,10 @@ public:
         // This force field doesn't update the state directly.
     }
     double calcForcesAndEnergy(OpenMM::ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
-    std::map<std::string, double> getDefaultParameters() {
-        return std::map<std::string, double>(); // This force field doesn't define any parameters.
-    }
+    std::map<std::string, double> getDefaultParameters();
+    //{
+    //    return std::map<std::string, double>(); // This force field doesn't define any parameters.
+    //}
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(OpenMM::ContextImpl& context);
     double getPerturbationEnergy() const {

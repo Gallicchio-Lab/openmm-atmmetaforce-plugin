@@ -4,15 +4,7 @@ class ATMMetaForceUtils(object):
 
     def __init__(self, system):
         self.system = system
-        self.RestraintControlParameterName = "SDMRestraintControlParameter"
         self.force = None
-        self.LinearMethod = 0
-        self.QuadraticMethod = 1
-        self.ILogisticMethod = 2
-
-        self.NoSoftCoreMethod = 0
-        self.TanhSoftCoreMethod = 1
-        self.RationalSoftCoreMethod = 2
 
     def _setRcptReferenceParticles(self, rcpt_ref_particles):
         if len(rcpt_ref_particles) != 3:
@@ -25,9 +17,6 @@ class ATMMetaForceUtils(object):
         if not all(x in self.ligparticles for x in lig_ref_particles):
             raise ValueError("Invalid ligand atom indexes")
         self.lig_ref_particles = lig_ref_particles
-
-    def getControlParameterName(self):
-        return self.RestraintControlParameterName
 
     def addRestraintForce(self,
                           lig_cm_particles = None, rcpt_cm_particles = None,
@@ -59,12 +48,12 @@ class ATMMetaForceUtils(object):
 
         expr = ""
 
-        expr += "%s*( (kfcm/2)*step(d12-tolcm)*(d12-tolcm)^2 )                      " % self.RestraintControlParameterName
+        expr += "1.0 *( (kfcm/2)*step(d12-tolcm)*(d12-tolcm)^2 )                      "
 
         if do_angles:
-            expr += " + %s*( (kfcd0/2)*(step(dm0)*max(0,db0)^2+step(-dm0)*max(0,-da0)^2) )  " % self.RestraintControlParameterName
-            expr += " + %s*( (kfcd1/2)*(step(dm1)*max(0,db1)^2+step(-dm1)*max(0,-da1)^2) )  " % self.RestraintControlParameterName
-            expr += " + %s*( (kfcd2/2)*(step(dm2)*max(0,db2)^2+step(-dm2)*max(0,-da2)^2) )  " % self.RestraintControlParameterName
+            expr += " + 1.0 *( (kfcd0/2)*(step(dm0)*max(0,db0)^2+step(-dm0)*max(0,-da0)^2) )  "
+            expr += " + 1.0 *( (kfcd1/2)*(step(dm1)*max(0,db1)^2+step(-dm1)*max(0,-da1)^2) )  "
+            expr += " + 1.0 *( (kfcd2/2)*(step(dm2)*max(0,db2)^2+step(-dm2)*max(0,-da2)^2) )  "
 
         expr += " ; d12 = sqrt((x1 - offx - x2)^2 + (y1 - offy - y2)^2 + (z1 - offz - z2)^2 ) ; "
 
@@ -81,8 +70,8 @@ class ATMMetaForceUtils(object):
             expr += "da2 = xa2 - twopi*floor(xa2/twopi + 0.5)  ; xa2 = phi2 - a2 ; "
             expr += "dm2 = xm2 - twopi*floor(xm2/twopi + 0.5)  ; xm2 = phi2 - mid2 ; mid2 = (a2 + b2)/2 ; phi2 = dihedral(g3,g6,g7,g8) ; "
 
-        expr += "pi = SDpi ;"
-        expr += "twopi = 2*SDpi"
+        expr += "twopi = 2*pi ;"
+        expr += "pi = %f" % math.pi
 
         if do_angles:
             self.force =  mm.CustomCentroidBondForce(8,expr)
@@ -92,9 +81,6 @@ class ATMMetaForceUtils(object):
         self.system.addForce(self.force)
 
         self.force.setForceGroup(1) #the restraint force will be evaluated separately
-
-        self.force.addGlobalParameter(self.RestraintControlParameterName, 1.0)
-        self.force.addGlobalParameter("SDpi", math.pi)
 
         self.force.addPerBondParameter("kfcm")
         self.force.addPerBondParameter("tolcm")

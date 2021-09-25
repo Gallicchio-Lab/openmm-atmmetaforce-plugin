@@ -77,12 +77,6 @@ private:
 
     int numParticles;
     double PerturbationEnergy;
-
-    //softplus parameters
-    double lambda1, lambda2, alpha, u0, w0;
-    //soft core parameters
-    double umax, acore, ubcore;
-    
 };
 
 } // namespace ATMMetaForcePlugin
