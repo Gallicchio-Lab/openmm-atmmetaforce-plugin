@@ -35,6 +35,7 @@
 
 #include "openmm/Force.h"
 #include <vector>
+#include <string>
 #include "internal/windowsExportATMMetaForce.h"
 
 namespace ATMMetaForcePlugin {
