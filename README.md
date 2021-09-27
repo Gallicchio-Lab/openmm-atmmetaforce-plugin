@@ -3,7 +3,9 @@ An OpenMM plugin that implements the Alchemical Transfer Potential (ATM) for abs
 
 ## References
 
-The Alchemical Transfer Method (ATM) is based on a coordinate transformation to transfer directly the ligand from the solvent bulk to the binding site. A similar coordinate transformation is used to swap the positions of two ligands between the solvent and the binding site for relative binding free energy calculations. The method uses one simulation box, prepared with standard tools, without the need of dummy atoms nor alchemical topologies. In principle, any molecular file format supported by OpenMM is supported by this plugin. ATM and its applications are described in the following publications:
+The Alchemical Transfer Method (ATM) is based on a coordinate transformation to transfer directly the ligand from the solvent bulk to the binding site. A similar coordinate transformation is used to swap the positions of two ligands between the solvent and the binding site for relative binding free energy calculations. The method uses one simulation box, prepared with standard tools, without the need of dummy atoms nor alchemical topologies. In principle, any molecular file format supported by OpenMM is supported by this plugin. 
+
+ATM and its applications are described in the following publications:
 
 [Alchemical Transfer Approach to Absolute Binding Free Energy Estimation.  J. Chem. Theory and Comput. 17, 3306 (2021)](https://doi.org/10.1021/acs.jctc.1c00266)
 
@@ -26,7 +28,7 @@ Support from the National Science Foundation [CAREER 1750511](https://www.nsf.go
 
 ## Requirements
 
-OpenMM 7.5.0 or later. Tested with OpenMM 7.5.0. 
+OpenMM 7.5.0 or later. Tested with OpenMM 7.5.0 and 7.6.0.
 
 Only the Reference and OpenCL platforms are currently supported. CUDA support will be added in the near future through OpenMM's Common Compute platform.
 
@@ -36,14 +38,13 @@ This software is released under the LGPL license. See LICENSE.
 
 ## Installation
 
-Locate the OpenMM installation directory, otherwise it will default to `/usr/local/openmm`. See above regarding patching OpenMM's desmond file reader.
+Locate the OpenMM installation directory, otherwise it will default to `/usr/local/openmm`.
 
 Download this package from github:
 
 ```
 git clone https://github.com/Gallicchio-Lab/openmm-atmmetaforce-plugin.git
 ```
-
 
 Build and install the plugin with cmake. Assuming a unix system:
 
