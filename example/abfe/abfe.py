@@ -127,7 +127,7 @@ simulation.context.setParameter(atmforce.Acore(), acore)
 state = simulation.context.getState(getEnergy = True, groups = {1,3})
 print("Potential Energy =", state.getPotentialEnergy())
 
-print("Leg2 production at lambda = %f ..." % lmbd)
+print("Leg1 production at lambda = %f ..." % lmbd)
 
 stepId = 5000
 totalSteps = 50000
