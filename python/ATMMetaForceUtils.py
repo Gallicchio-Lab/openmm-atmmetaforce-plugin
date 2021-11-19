@@ -2,7 +2,7 @@
 
 class ATMMetaForceUtils(object):
 
-    def __init__(self, system):
+    def __init__(self, system, fix_zero_LJparams = True):
         self.system = system
         #place all existing forces in group 1, except for the non-bonded forces that go in group 2
         import re
@@ -10,6 +10,8 @@ class ATMMetaForceUtils(object):
         for force in system.getForces():
             if nbpattern.match(str(type(force))):
                 force.setForceGroup(2)
+                if fix_zero_LJparams:
+                    self.fixZeroLJParams(force)
             else:
                 force.setForceGroup(1)
 
@@ -268,4 +270,19 @@ class ATMMetaForceUtils(object):
             y0 = refpos[p][1]
             z0 = refpos[p][2]
             posrestforce.addParticle(p, [x0, y0, z0, fc, tol])
+
+    #fix zero LJs
+    def fixZeroLJParams(self, force):
+        small = 1.0e-6
+        if isinstance(force, mm.NonbondedForce):
+            for i in range(force.getNumParticles()):
+                nbparam = force.getParticleParameters(i)
+                charge = nbparam[0]
+                sigmaLJ = nbparam[1]
+                epsilonLJ = nbparam[2]
+                if sigmaLJ._value < small and epsilonLJ._value < small:
+                    sigmaLJ = 0.1 * angstrom
+                    epsilonLJ = 1.e-4 * kilocalories_per_mole
+                    force.setParticleParameters(i, charge, sigmaLJ, epsilonLJ)
+
 %}
