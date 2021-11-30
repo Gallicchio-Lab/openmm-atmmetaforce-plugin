@@ -49,9 +49,17 @@ public:
     /**
      * Create an ATMMetaForce.
      */
+    ATMMetaForce(double Lambda) :
+     defaultLambda1(Lambda), defaultLambda2(Lambda), defaultAlpha(0.0), defaultU0(0.), defaultW0(0.),
+       defaultUmax(400.), defaultUbcore(200.), defaultAcore(0.0625), defaultDirection(1.0) {
+     }
     ATMMetaForce(double Lambda1, double Lambda2, double Alpha, double U0, double W0, double Umax, double Ubcore, double Acore) :
      defaultLambda1(Lambda1), defaultLambda2(Lambda2), defaultAlpha(Alpha), defaultU0(U0), defaultW0(W0),
-     defaultUmax(Umax), defaultUbcore(Ubcore), defaultAcore(Acore) {
+       defaultUmax(Umax), defaultUbcore(Ubcore), defaultAcore(Acore), defaultDirection(1.0) {
+     }
+    ATMMetaForce(double Lambda1, double Lambda2, double Alpha, double U0, double W0, double Umax, double Ubcore, double Acore, double direction) :
+     defaultLambda1(Lambda1), defaultLambda2(Lambda2), defaultAlpha(Alpha), defaultU0(U0), defaultW0(W0),
+       defaultUmax(Umax), defaultUbcore(Ubcore), defaultAcore(Acore), defaultDirection(direction) {
      }
     /**
      * Get the number of particles
@@ -84,11 +92,8 @@ public:
      */
     void setParticleParameters(int index, int particle, double dx, double dy, double dz);
     /**
-     * Update the per-bond parameters in a Context to match those stored in this Force object.  This method provides
-     * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
-     * Simply call setParticleParameters() to modify this object's parameters, then call updateParametersInState()
-     * to copy them over to the Context.
-     * 
+     * Update the per-particle parameters in a Context to match those stored in this Force object.  This method 
+     * should be called after updating parameters with setParticleParameters() to copy them over to the Context.
      * The only information this method updates is the values of per-particle parameters.  The number of particles
      * cannot be changed.
      */
@@ -143,7 +148,10 @@ public:
         static const std::string key = "ATMAcore";
         return key;
     }
-
+    static const std::string& Direction() {
+        static const std::string key = "ATMDirection";
+        return key;
+    }
 
     /**
      *  default values of the parameters
@@ -172,7 +180,9 @@ public:
     double getDefaultAcore() const {
         return defaultAcore;
     }
-
+    double getDefaultDirection() const {
+        return defaultDirection;
+    }
     
 protected:
   OpenMM::ForceImpl* createImpl() const;
@@ -184,6 +194,8 @@ private:
     double defaultLambda1, defaultLambda2, defaultAlpha, defaultU0, defaultW0;
     //soft core parameters
     double defaultUmax, defaultUbcore, defaultAcore;
+    //alchemical direction parameter
+    double defaultDirection;
 };
 
 /**

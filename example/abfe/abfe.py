@@ -101,6 +101,7 @@ platform_name = 'OpenCL'
 platform = Platform.getPlatformByName(platform_name)
 
 properties = {}
+properties["Precision"] = "mixed"
 
 simulation = Simulation(prmtop.topology, system, integrator,platform, properties)
 print ("Using platform %s" % simulation.context.getPlatform().getName())

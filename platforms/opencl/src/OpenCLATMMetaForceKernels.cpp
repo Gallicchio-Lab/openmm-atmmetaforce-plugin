@@ -122,10 +122,16 @@ void OpenCLCalcATMMetaForceKernel::initkernels(OpenMM::ContextImpl& context, Ope
     cl::Program program = cl.createProgram(OpenCLATMMetaForceKernelSources::atmmetaforce, "");
     CopyStateKernel = cl::Kernel(program, "CopyState");
     CopyStateKernel.setArg<cl_int>(0, numParticles);
+    int nargs = 0;
     CopyStateKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
     CopyStateKernel.setArg<cl::Buffer>(2, cl1.getPosq().getDeviceBuffer());
     CopyStateKernel.setArg<cl::Buffer>(3, cl2.getPosq().getDeviceBuffer());
     CopyStateKernel.setArg<cl::Buffer>(4, displ->getDeviceBuffer());
+    if(cl.getUseMixedPrecision()){
+      CopyStateKernel.setArg<cl::Buffer>(5, cl.getPosqCorrection().getDeviceBuffer());
+      CopyStateKernel.setArg<cl::Buffer>(6, cl1.getPosqCorrection().getDeviceBuffer());
+      CopyStateKernel.setArg<cl::Buffer>(7, cl2.getPosqCorrection().getDeviceBuffer());
+    }
 
     //create the HybridForce kernel
     HybridForceKernel = cl::Kernel(program, "HybridForce");
@@ -158,9 +164,16 @@ double OpenCLCalcATMMetaForceKernel::execute(OpenMM::ContextImpl& context,
   double ubcore = context.getParameter(ATMMetaForce::Ubcore());
   double acore = context.getParameter(ATMMetaForce::Acore());
 
+  //alchemical direction
+  // 1 = from RA  (reference) to R+A (displaced)
+  //-1 = from R+A (displaced) to RA  (reference)
+  double alchemical_direction = context.getParameter(ATMMetaForce::Direction());
+
   //soft-core perturbation energy
   double fp;
-  PerturbationEnergy = SoftCoreF(State2Energy - State1Energy, umax, acore, ubcore, fp);
+  double u  = alchemical_direction > 0 ?  State2Energy - State1Energy : State1Energy - State2Energy;
+  double e0 = alchemical_direction > 0 ?  State1Energy                : State2Energy;
+  PerturbationEnergy = SoftCoreF(u, umax, acore, ubcore, fp);
 
   //softplus function
   double ebias = 0.0;
@@ -172,10 +185,10 @@ double OpenCLCalcATMMetaForceKernel::execute(OpenMM::ContextImpl& context,
   double bfp = (lambda2 - lambda1)/ee + lambda1;
 
   //alchemical potential energy
-  double energy = State1Energy + ebias;
+  double energy = e0 + ebias;
 
   //hybridize forces and add them to the system's forces
-  float sp = bfp*fp;
+  float sp = alchemical_direction > 0 ? bfp*fp : 1. - bfp*fp;
   HybridForceKernel.setArg<cl_float>(4, sp);
   cl.executeKernel(HybridForceKernel, numParticles);
   
@@ -215,6 +228,12 @@ void OpenCLCalcATMMetaForceKernel::copyParametersToContext(ContextImpl& context,
   }
   const vector<int>& id = cl.getAtomIndex();
   vector<mm_float4> displVectorContext(displVector);
+  for (int i = 0; i < cl.getPaddedNumAtoms(); i++){
+    displVectorContext[i].x = 0;
+    displVectorContext[i].y = 0;
+    displVectorContext[i].z = 0;
+    displVectorContext[i].w = 0;
+  }
   for (int i = 0; i < numParticles; i++){
     displVectorContext[i] = displVector[id[i]];
   }

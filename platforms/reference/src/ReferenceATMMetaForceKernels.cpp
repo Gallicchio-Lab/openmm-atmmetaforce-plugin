@@ -74,9 +74,16 @@ double ReferenceCalcATMMetaForceKernel::execute(ContextImpl& context, ContextImp
     double ubcore = context.getParameter(ATMMetaForce::Ubcore());
     double acore = context.getParameter(ATMMetaForce::Acore());
 
+    //alchemical direction
+    // 1 = from RA  (reference) to R+A (displaced)
+    //-1 = from R+A (displaced) to RA  (reference)
+    double alchemical_direction = context.getParameter(ATMMetaForce::Direction());
+
     //soft-core perturbation energy
     double fp;
-    PerturbationEnergy = SoftCoreF(State2Energy - State1Energy, umax, acore, ubcore, fp);
+    double u  = alchemical_direction > 0 ?  State2Energy - State1Energy : State1Energy - State2Energy;
+    double e0 = alchemical_direction > 0 ?  State1Energy                : State2Energy;
+    PerturbationEnergy = SoftCoreF(u, umax, acore, ubcore, fp);
 
     //softplus function
     double ebias = 0.0;
@@ -88,12 +95,18 @@ double ReferenceCalcATMMetaForceKernel::execute(ContextImpl& context, ContextImp
     double bfp = (lambda2 - lambda1)/ee + lambda1;
 
     //alchemical potential energy
-    double energy = State1Energy + ebias;
+    double energy = e0 + ebias;
 
     //hybridize forces and add them to the system's forces
     double sp = bfp*fp;
-    for(int i=0; i < numParticles; i++){
-      force[i] += sp*force2[i] + (1.-sp)*force1[i];
+    if(alchemical_direction > 0){
+      for(int i=0; i < numParticles; i++){
+	force[i] += sp*force2[i] + (1.-sp)*force1[i];
+      }
+    }else{
+      for(int i=0; i < numParticles; i++){
+	force[i] += sp*force1[i] + (1.-sp)*force2[i];
+      }
     }
 
     return (includeEnergy ? energy : 0.0);

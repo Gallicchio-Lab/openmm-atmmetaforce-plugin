@@ -137,6 +137,7 @@ std::map<std::string, double> ATMMetaForceImpl::getDefaultParameters(){
   parameters[ATMMetaForce::Umax()]    = getOwner().getDefaultUmax();
   parameters[ATMMetaForce::Ubcore()]  = getOwner().getDefaultUbcore();
   parameters[ATMMetaForce::Acore()]   = getOwner().getDefaultAcore();
+  parameters[ATMMetaForce::Direction()]   = getOwner().getDefaultDirection();
   return parameters;
 }
 
