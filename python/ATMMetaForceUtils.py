@@ -44,10 +44,10 @@ class ATMMetaForceUtils(object):
                           offset = [0., 0., 0.] * angstrom):
 
         if not (lig_cm_particles and rcpt_cm_particles):
-            return
+            return None
 
         if not (len(lig_cm_particles) > 0 and len(rcpt_cm_particles) > 0):
-            return
+            return None
 
         do_angles = False
         if lig_ref_particles and rcpt_ref_particles:
@@ -150,7 +150,7 @@ class ATMMetaForceUtils(object):
             params = [kfc, tolc, offx, offy, offz]
 
         force.addBond(groups, params)
-
+        return force
 
     # a force to keep two ligands aligned
     # keeps ref atoms 1 near each other when offset is added
@@ -245,11 +245,12 @@ class ATMMetaForceUtils(object):
                           liga_ref_particles[0],liga_ref_particles[2] ] ,
                            [kpsi/kilojoule_per_mole])
         psiforce.setForceGroup(1)
+        return (displforce, thetaforce, psiforce )
 
     # applies flat-bottom restraints to a set of atoms based on a set of reference positions
     def addPosRestraints(self, particles, refpos, fc = 25.0 * kilocalorie_per_mole/angstrom**2, tol = 0.5 * angstrom, periodic = True):
         if not particles or len(particles) == 0:
-            return
+            return None
         if periodic:
             posrestforce = mm.CustomExternalForce("0.5*fc*select(step(dist-tol), (dist-tol)^2, 0); dist = periodicdistance(x,y,z,x0,y0,z0)")
         else:
@@ -270,6 +271,7 @@ class ATMMetaForceUtils(object):
             y0 = refpos[p][1]
             z0 = refpos[p][2]
             posrestforce.addParticle(p, [x0, y0, z0, fc, tol])
+        return posrestforce
 
     #fix zero LJs
     def fixZeroLJParams(self, force):
