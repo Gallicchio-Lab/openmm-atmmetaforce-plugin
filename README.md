@@ -82,7 +82,7 @@ Repeat for the example under `example/rbfe/`:
 
 Each test produces a short MD run for a [SAMPL8 host-guest system](https://arxiv.org/abs/2107.05155) at the alchemical intermediate state at λ=1/2. The first is for the absolute binding free energy calculation and the second for relative binding. Each generates an output file, `.out`, of the form:
 ```
-00.000000 0.500000 0.500000 0.500000 0.000000 0.000000 0.000000 -69967.037957 -0.956023
+300.000000 0.500000 0.500000 0.500000 0.000000 0.000000 0.000000 -69967.037957 -0.956023
 300.000000 0.500000 0.500000 0.500000 0.000000 0.000000 0.000000 -69923.338273 -0.836520
 300.000000 0.500000 0.500000 0.500000 0.000000 0.000000 0.000000 -69737.383816 5.048996
 300.000000 0.500000 0.500000 0.500000 0.000000 0.000000 0.000000 -69704.356182 1.195029
