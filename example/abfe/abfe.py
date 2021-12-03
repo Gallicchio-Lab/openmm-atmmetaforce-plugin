@@ -24,6 +24,7 @@ w0coeff = 0.0 * kilocalorie_per_mole
 umsc =  200.0 * kilocalorie_per_mole
 ubcore = 100.0 * kilocalorie_per_mole
 acore = 0.062500
+direction = 1.0
 
 rcpt_resid = 1
 lig_resid = 2
@@ -74,7 +75,7 @@ for at in prmtop.topology.atoms():
 atm_utils.addPosRestraints(posrestr_atoms, inpcrd.positions, fc, tol)
         
 #create ATM Force
-atmforce = ATMMetaForce(lambda1, lambda2,  alpha * kilojoules_per_mole, u0/kilojoules_per_mole, w0coeff/kilojoules_per_mole, umsc/kilojoules_per_mole, ubcore/kilojoules_per_mole, acore )
+atmforce = ATMMetaForce(lambda1, lambda2,  alpha * kilojoules_per_mole, u0/kilojoules_per_mole, w0coeff/kilojoules_per_mole, umsc/kilojoules_per_mole, ubcore/kilojoules_per_mole, acore, direction )
 for at in prmtop.topology.atoms():
     atmforce.addParticle(at.index, 0., 0., 0.)
 for i in lig_atoms:
@@ -124,6 +125,7 @@ simulation.context.setParameter(atmforce.W0(), w0coeff /kilojoules_per_mole)
 simulation.context.setParameter(atmforce.Umax(), umsc /kilojoules_per_mole)
 simulation.context.setParameter(atmforce.Ubcore(), ubcore /kilojoules_per_mole)
 simulation.context.setParameter(atmforce.Acore(), acore)
+simulation.context.setParameter(atmforce.Direction(), acore)
 
 state = simulation.context.getState(getEnergy = True, groups = {1,3})
 print("Potential Energy =", state.getPotentialEnergy())
