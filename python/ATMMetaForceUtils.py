@@ -243,7 +243,10 @@ class ATMMetaForceUtils(object):
         psiforce.addPerBondParameter("kpsi")
         psiforce.addBond([ligb_ref_particles[0],ligb_ref_particles[1],ligb_ref_particles[2],
                           liga_ref_particles[0],liga_ref_particles[2] ] ,
-                           [kpsi/kilojoule_per_mole])
+                           [0.5*kpsi/kilojoule_per_mole])
+        psiforce.addBond([liga_ref_particles[0],liga_ref_particles[1],liga_ref_particles[2],
+                          ligb_ref_particles[0],ligb_ref_particles[2] ] ,
+                         [0.5*kpsi/kilojoule_per_mole])
         psiforce.setForceGroup(1)
         return (displforce, thetaforce, psiforce )
 
