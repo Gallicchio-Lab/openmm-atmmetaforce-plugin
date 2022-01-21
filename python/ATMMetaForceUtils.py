@@ -68,12 +68,12 @@ class ATMMetaForceUtils(object):
            force.addPerBondParameter("offx")
            force.addPerBondParameter("offy")
            force.addPerBondParameter("offz")
-           numgroups = force.getNumGroups()
+           numgroups = 0
            force.setForceGroup(1)
            self.system.addForce(force)
         else:
             force = self.CMCMDistForce
-            numgroups = 0
+            numgroups = force.getNumGroups()
         force.addGroup(lig_cm_particles) #g1 CM of lig
         force.addGroup(rcpt_cm_particles) #g2 CM of rcpt
         kfc = kfcm / (kilojoule_per_mole/radians**2)
@@ -363,10 +363,10 @@ class ATMMetaForceUtils(object):
         self.system.addForce(psiforce)
         psiforce.addPerBondParameter("kpsi")
         psiforce.addBond([ligb_ref_particles[0],ligb_ref_particles[1],ligb_ref_particles[2],
-                          liga_ref_particles[0],liga_ref_particles[1] ] ,
+                          liga_ref_particles[0],liga_ref_particles[2] ] ,
                            [0.5*kpsi/kilojoule_per_mole])
         psiforce.addBond([liga_ref_particles[0],liga_ref_particles[1],liga_ref_particles[2],
-                          ligb_ref_particles[0],ligb_ref_particles[1] ] ,
+                          ligb_ref_particles[0],ligb_ref_particles[2] ] ,
                          [0.5*kpsi/kilojoule_per_mole])
         psiforce.setForceGroup(1)
         return (displforce, thetaforce, psiforce )
