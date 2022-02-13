@@ -1,6 +1,7 @@
 %pythoncode %{
 import string
 import random
+from simtk.openmm import version as ommversion
 
 class ATMMetaForceUtils(object):
 
@@ -11,6 +12,9 @@ class ATMMetaForceUtils(object):
         self.CMAngleThetaForce = None
         self.CMAnglePhiForce = None
         self.CMAnglePsiForce = None
+
+        self.major_ommversion = int(ommversion.version.split(".")[0])
+        self.minor_ommversion = int(ommversion.version.split(".")[1])
 
     #place all existing forces in group 1, except for the non-bonded forces that go in group 2
         import re
@@ -118,46 +122,57 @@ class ATMMetaForceUtils(object):
                  "{zc} =  {x1}*{y2} - {x2}*{y1}   " ).format(xc = xc, yc = yc, zc = zc, x1 = x1, y1 = y1, z1 = z1, x2 = x2, y2 = y2, z2 = z2)
 
     def _cosangleExpression(self, costh, x1, y1, z1, x2, y2, z2, x3, y3, z3):
-        letters = string.ascii_lowercase
-        v1  = "v1"  + ''.join(random.choice(letters) for i in range(4))
-        v1u = "v1u" + ''.join(random.choice(letters) for i in range(4))
-        v2  = "v2"  + ''.join(random.choice(letters) for i in range(4))
-        v2u = "v2u" + ''.join(random.choice(letters) for i in range(4))
-        expr  = self._dotExpression(costh, "x"+v1u,"y"+v1u,"z"+v1u,"x"+v2u,"y"+v2u,"z"+v2u) + " ; "
-        expr += self._unitvExpression("x"+v1u,"y"+v1u,"z"+v1u, "x"+v1,"y"+v1,"z"+v1) + " ; "
-        expr += self._unitvExpression("x"+v2u,"y"+v2u,"z"+v2u, "x"+v2,"y"+v2,"z"+v2) + " ; "
-        expr += self._diffvExpression("x"+v1, "y"+v1, "z"+v1, x1, y1, z1, x2, y2, z2) + " ; "
-        expr += self._diffvExpression("x"+v2, "y"+v2, "z"+v2, x3, y3, z3, x2, y2, z2)
-        return expr
+        if self.major_ommversion >= 7 and self.minor_ommversion >= 6:
+            return costh + "= cos(pointangle(" + x1 + "," + y1 + "," + z1 + "," + \
+                                                 x2 + "," + y2 + "," + z2 + "," + \
+                                                 x3 + "," + y3 + "," + z3 + "))"
+        else:
+            letters = string.ascii_lowercase
+            v1  = "v1"  + ''.join(random.choice(letters) for i in range(4))
+            v1u = "v1u" + ''.join(random.choice(letters) for i in range(4))
+            v2  = "v2"  + ''.join(random.choice(letters) for i in range(4))
+            v2u = "v2u" + ''.join(random.choice(letters) for i in range(4))
+            expr  = self._dotExpression(costh, "x"+v1u,"y"+v1u,"z"+v1u,"x"+v2u,"y"+v2u,"z"+v2u) + " ; "
+            expr += self._unitvExpression("x"+v1u,"y"+v1u,"z"+v1u, "x"+v1,"y"+v1,"z"+v1) + " ; "
+            expr += self._unitvExpression("x"+v2u,"y"+v2u,"z"+v2u, "x"+v2,"y"+v2,"z"+v2) + " ; "
+            expr += self._diffvExpression("x"+v1, "y"+v1, "z"+v1, x1, y1, z1, x2, y2, z2) + " ; "
+            expr += self._diffvExpression("x"+v2, "y"+v2, "z"+v2, x3, y3, z3, x2, y2, z2)
+            return expr
 
     def _dihedralExpression(self, phi, x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4):
-        letters = string.ascii_lowercase
-        v1   = "v1"   + ''.join(random.choice(letters) for i in range(4))
-        v2   = "v2"   + ''.join(random.choice(letters) for i in range(4))
-        v2u  = "v2u"  + ''.join(random.choice(letters) for i in range(4))
-        v3   = "v3"   + ''.join(random.choice(letters) for i in range(4))
-        n1   = "n1"   + ''.join(random.choice(letters) for i in range(4))
-        n1u  = "n1u"  + ''.join(random.choice(letters) for i in range(4))
-        n2   = "n2"   + ''.join(random.choice(letters) for i in range(4))
-        n2u  = "n2u"  + ''.join(random.choice(letters) for i in range(4))
-        m1   = "m1"   + ''.join(random.choice(letters) for i in range(4))
-        m1u  = "m1u"  + ''.join(random.choice(letters) for i in range(4))
-        cx   = "cx"   + ''.join(random.choice(letters) for i in range(4))
-        cy   = "cy"   + ''.join(random.choice(letters) for i in range(4))
-        expr  = "{phi} = atan2({cy} , {cx}) ; ".format(phi = phi, cx = cx, cy = cy)
-        expr += self._dotExpression(cx, "x"+n1u,"y"+n1u,"z"+n1u,"x"+n2u,"y"+n2u,"z"+n2u) + " ; "
-        expr += self._dotExpression(cy, "x"+m1u,"y"+m1u,"z"+m1u,"x"+n2u,"y"+n2u,"z"+n2u) + " ; "
-        expr += self._unitvExpression("x"+m1u,"y"+m1u,"z"+m1u, "x"+m1,  "y"+m1,  "z"+m1) + " ; "
-        expr += self._crossExpression("x"+m1, "y"+m1, "z"+m1,  "x"+v2u, "y"+v2u, "z"+v2u, "x"+n1u, "y"+n1u, "z"+n1u) + " ; "
-        expr += self._unitvExpression("x"+n1u,"y"+n1u,"z"+n1u, "x"+n1,  "y"+n1,  "z"+n1) + " ; "
-        expr += self._unitvExpression("x"+n2u,"y"+n2u,"z"+n2u, "x"+n2,  "y"+n2,  "z"+n2) + " ; "
-        expr += self._unitvExpression("x"+v2u,"y"+v2u,"z"+v2u, "x"+v2,  "y"+v2,  "z"+v2) + " ; "
-        expr += self._crossExpression("x"+n2, "y"+n2, "z"+n2,  "x"+v2,  "y"+v2,  "z"+v2, "x"+v3, "y"+v3, "z"+v3) + " ; "
-        expr += self._crossExpression("x"+n1, "y"+n1, "z"+n1,  "x"+v1,  "y"+v1,  "z"+v1, "x"+v2, "y"+v2, "z"+v2) + " ; "
-        expr += self._diffvExpression("x"+v1, "y"+v1, "z"+v1, x2, y2, z2, x1, y1, z1) + " ; "
-        expr += self._diffvExpression("x"+v2, "y"+v2, "z"+v2, x3, y3, z3, x2, y2, z2) + " ; "
-        expr += self._diffvExpression("x"+v3, "y"+v3, "z"+v3, x4, y4, z4, x3, y3, z3)
-        return expr
+        if self.major_ommversion >= 7 and self.minor_ommversion >= 6:
+            return phi + "= pointdihedral(" + x1 + "," + y1 + "," + z1 + "," + \
+                                              x2 + "," + y2 + "," + z2 + "," + \
+                                              x3 + "," + y3 + "," + z3 + "," + \
+                                              x4 + "," + y4 + "," + z4 + ")"
+        else:
+            letters = string.ascii_lowercase
+            v1   = "v1"   + ''.join(random.choice(letters) for i in range(4))
+            v2   = "v2"   + ''.join(random.choice(letters) for i in range(4))
+            v2u  = "v2u"  + ''.join(random.choice(letters) for i in range(4))
+            v3   = "v3"   + ''.join(random.choice(letters) for i in range(4))
+            n1   = "n1"   + ''.join(random.choice(letters) for i in range(4))
+            n1u  = "n1u"  + ''.join(random.choice(letters) for i in range(4))
+            n2   = "n2"   + ''.join(random.choice(letters) for i in range(4))
+            n2u  = "n2u"  + ''.join(random.choice(letters) for i in range(4))
+            m1   = "m1"   + ''.join(random.choice(letters) for i in range(4))
+            m1u  = "m1u"  + ''.join(random.choice(letters) for i in range(4))
+            cx   = "cx"   + ''.join(random.choice(letters) for i in range(4))
+            cy   = "cy"   + ''.join(random.choice(letters) for i in range(4))
+            expr  = "{phi} = atan2({cy} , {cx}) ; ".format(phi = phi, cx = cx, cy = cy)
+            expr += self._dotExpression(cx, "x"+n1u,"y"+n1u,"z"+n1u,"x"+n2u,"y"+n2u,"z"+n2u) + " ; "
+            expr += self._dotExpression(cy, "x"+m1u,"y"+m1u,"z"+m1u,"x"+n2u,"y"+n2u,"z"+n2u) + " ; "
+            expr += self._unitvExpression("x"+m1u,"y"+m1u,"z"+m1u, "x"+m1,  "y"+m1,  "z"+m1) + " ; "
+            expr += self._crossExpression("x"+m1, "y"+m1, "z"+m1,  "x"+v2u, "y"+v2u, "z"+v2u, "x"+n1u, "y"+n1u, "z"+n1u) + " ; "
+            expr += self._unitvExpression("x"+n1u,"y"+n1u,"z"+n1u, "x"+n1,  "y"+n1,  "z"+n1) + " ; "
+            expr += self._unitvExpression("x"+n2u,"y"+n2u,"z"+n2u, "x"+n2,  "y"+n2,  "z"+n2) + " ; "
+            expr += self._unitvExpression("x"+v2u,"y"+v2u,"z"+v2u, "x"+v2,  "y"+v2,  "z"+v2) + " ; "
+            expr += self._crossExpression("x"+n2, "y"+n2, "z"+n2,  "x"+v2,  "y"+v2,  "z"+v2, "x"+v3, "y"+v3, "z"+v3) + " ; "
+            expr += self._crossExpression("x"+n1, "y"+n1, "z"+n1,  "x"+v1,  "y"+v1,  "z"+v1, "x"+v2, "y"+v2, "z"+v2) + " ; "
+            expr += self._diffvExpression("x"+v1, "y"+v1, "z"+v1, x2, y2, z2, x1, y1, z1) + " ; "
+            expr += self._diffvExpression("x"+v2, "y"+v2, "z"+v2, x3, y3, z3, x2, y2, z2) + " ; "
+            expr += self._diffvExpression("x"+v3, "y"+v3, "z"+v3, x4, y4, z4, x3, y3, z3)
+            return expr
 
     # ** UNTESTED **
     # Adds Boresch-style Vsite restraints [J. Phys. Chem. B, Vol. 107, No. 35, 2003]
