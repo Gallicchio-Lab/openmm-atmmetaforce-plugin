@@ -1,8 +1,10 @@
 #---------------------------------------------------
-# OpenMM ATM Meta Force Plugin
+# OpenMM ATMMetaForce Plugin
 #----------------------------------------------------
 
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.17)
+
+PROJECT(OpenMMATMMetaForcePlugin)
 
 # We need to know where OpenMM is installed so we can access the headers and libraries.
 SET(OPENMM_DIR "/usr/local/openmm" CACHE PATH "Where OpenMM is installed")
@@ -29,7 +31,8 @@ ENDIF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
-SET(ATMMETAFORCE_PLUGIN_SOURCE_SUBDIRS openmmapi)# serialization)
+#SET(ATMMETAFORCE_PLUGIN_SOURCE_SUBDIRS openmmapi serialization)
+SET(ATMMETAFORCE_PLUGIN_SOURCE_SUBDIRS openmmapi)
 
 # Set the library name
 SET(ATMMETAFORCE_LIBRARY_NAME ATMMetaForcePlugin)
@@ -81,10 +84,9 @@ INSTALL (FILES ${API_ONLY_INCLUDE_FILES_INTERNAL} DESTINATION include/internal)
 
 # Build the implementations for different platforms
 
-#reference
 ADD_SUBDIRECTORY(platforms/reference)
+ADD_SUBDIRECTORY(platforms/common)
 
-#OpenCL
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}")
 FIND_PACKAGE(OpenCL QUIET)
 IF(OPENCL_FOUND)
@@ -95,6 +97,16 @@ ENDIF(OPENCL_FOUND)
 IF(ATMMETAFORCE_BUILD_OPENCL_LIB)
     ADD_SUBDIRECTORY(platforms/opencl)
 ENDIF(ATMMETAFORCE_BUILD_OPENCL_LIB)
+
+FIND_PACKAGE(CUDA QUIET)
+IF(CUDA_FOUND)
+    SET(ATMMETAFORCE_BUILD_CUDA_LIB ON CACHE BOOL "Build implementation for CUDA")
+ELSE(CUDA_FOUND)
+    SET(ATMMETAFORCE_BUILD_CUDA_LIB OFF CACHE BOOL "Build implementation for CUDA")
+ENDIF(CUDA_FOUND)
+IF(ATMMETAFORCE_BUILD_CUDA_LIB)
+    ADD_SUBDIRECTORY(platforms/cuda)
+ENDIF(ATMMETAFORCE_BUILD_CUDA_LIB)
 
 # Build the Python API
 
@@ -108,4 +120,3 @@ ENDIF(PYTHON_EXECUTABLE AND SWIG_EXECUTABLE)
 IF(ATMMETAFORCE_BUILD_PYTHON_WRAPPERS)
     ADD_SUBDIRECTORY(python)
 ENDIF(ATMMETAFORCE_BUILD_PYTHON_WRAPPERS)
-

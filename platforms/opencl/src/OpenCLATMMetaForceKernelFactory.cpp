@@ -2,7 +2,9 @@
 #include <exception>
 
 #include "OpenCLATMMetaForceKernelFactory.h"
+#include "CommonATMMetaForceKernels.h"
 #include "OpenCLATMMetaForceKernels.h"
+#include "openmm/opencl/OpenCLContext.h"
 #include "openmm/internal/windowsExport.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
@@ -37,6 +39,6 @@ extern "C" OPENMM_EXPORT void registerATMMetaForceOpenCLKernelFactories() {
 KernelImpl* OpenCLATMMetaForceKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
     OpenCLContext& cl = *static_cast<OpenCLPlatform::PlatformData*>(context.getPlatformData())->contexts[0];
     if (name == CalcATMMetaForceKernel::Name())
-        return new OpenCLCalcATMMetaForceKernel(name, platform, cl, context.getSystem());
+        return new OpenCLCalcATMMetaForceKernel(name, platform, cl);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }

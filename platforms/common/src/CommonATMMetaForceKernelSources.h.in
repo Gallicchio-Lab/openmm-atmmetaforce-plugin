@@ -1,0 +1,21 @@
+#ifndef OPENMM_COMMONATMMETAFORCEKERNELSOURCES_H_
+#define OPENMM_COMMONATMMETAFORCEKERNELSOURCES_H_
+
+#include <string>
+
+namespace ATMMetaForcePlugin {
+
+/**
+ * This class is a central holding place for the source code of Common kernels.
+ * The CMake build script inserts declarations into it based on the .cc files in the
+ * kernels subfolder.
+ */
+
+class CommonATMMetaForceKernelSources {
+public:
+@KERNEL_FILE_DECLARATIONS@
+};
+
+} // namespace ATMMetaForcePlugin
+
+#endif /*OPENMM_COMMONATMMETAFORCEKERNELSOURCES_H_*/

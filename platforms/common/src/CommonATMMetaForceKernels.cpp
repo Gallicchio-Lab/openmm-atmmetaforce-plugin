@@ -1,9 +1,11 @@
 #include "ATMMetaForce.h"
-#include "OpenCLATMMetaForceKernels.h"
-#include "OpenCLATMMetaForceKernelSources.h"
+#include "CommonATMMetaForceKernels.h"
+#include "CommonATMMetaForceKernelSources.h"
+#include "openmm/common/CommonKernels.h"
+#include "openmm/Context.h"
 #include "openmm/internal/ContextImpl.h"
-#include "openmm/opencl/OpenCLBondedUtilities.h"
-#include "openmm/opencl/OpenCLForceInfo.h"
+#include "openmm/common/BondedUtilities.h"
+#include "openmm/common/ComputeForceInfo.h"
 #include <cmath>
 
 //DEBUG
@@ -26,10 +28,9 @@ static double SoftCoreF(double u, double umax, double a, double ub, double& fp){
   return (umax-ub)*(zetap - 1.)/(zetap + 1.) + ub;
 }
 
-//NOT SURE ABOUT THIS, it's not added to the Context?
-class OpenCLCalcATMMetaForceKernel::ForceInfo : public OpenCLForceInfo {
+class CommonCalcATMMetaForceKernel::ForceInfo : public ComputeForceInfo {
 public:
-    ForceInfo(ComputeForceInfo& force) : OpenCLForceInfo(0), force(force) {
+    ForceInfo(ComputeForceInfo& force) : force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
         return force.areParticlesIdentical(particle1, particle2);
@@ -48,39 +49,39 @@ private:
 };
 
 
-class OpenCLCalcATMMetaForceKernel::ReorderListener : public OpenCLContext::ReorderListener {
+class CommonCalcATMMetaForceKernel::ReorderListener : public ComputeContext::ReorderListener {
 public:
-  ReorderListener(OpenCLContext&  cl, vector<mm_float4>& displVector, OpenCLArray* displ) :
-    cl(cl), displVector(displVector), displ(displ)  {
+  ReorderListener(ComputeContext&  cc, vector<mm_float4>& displVector, ArrayInterface& displ) :
+    cc(cc), displVector(displVector), displ(displ)  {
     }
     void execute() {
-        const vector<int>& id = cl.getAtomIndex();
-	vector<mm_float4> newDisplVectorContext(cl.getPaddedNumAtoms());
-	for (int i = 0; i < cl.getNumAtoms(); i++){
+        const vector<int>& id = cc.getAtomIndex();
+	vector<mm_float4> newDisplVectorContext(cc.getPaddedNumAtoms());
+	for (int i = 0; i < cc.getNumAtoms(); i++){
 	  newDisplVectorContext[i] = displVector[id[i]];
 	}
-	displ->upload(newDisplVectorContext);
+	displ.upload(newDisplVectorContext);
     }
 private:
-    OpenCLContext& cl;
-    OpenCLArray* displ;
+    ComputeContext& cc;
+    ArrayInterface& displ;
     std::vector<mm_float4> displVector;
   
   
 };
 
 
-OpenCLCalcATMMetaForceKernel::~OpenCLCalcATMMetaForceKernel() {
+CommonCalcATMMetaForceKernel::~CommonCalcATMMetaForceKernel() {
 }
 
-void OpenCLCalcATMMetaForceKernel::initialize(const System& system, const ATMMetaForce& force) {
+void CommonCalcATMMetaForceKernel::initialize(const System& system, const ATMMetaForce& force) {
 
   numParticles = force.getNumParticles();
   if (numParticles == 0)
     return;
-  displVector.resize(cl.getPaddedNumAtoms());
-  vector<mm_float4> displVectorContext(cl.getPaddedNumAtoms());
-  for (int i = 0; i < cl.getPaddedNumAtoms(); i++){
+  displVector.resize(cc.getPaddedNumAtoms());
+  vector<mm_float4> displVectorContext(cc.getPaddedNumAtoms());
+  for (int i = 0; i < cc.getPaddedNumAtoms(); i++){
     displVector[i].x = displVectorContext[i].x = 0;
     displVector[i].y = displVectorContext[i].y = 0;
     displVector[i].z = displVectorContext[i].z = 0;
@@ -95,58 +96,61 @@ void OpenCLCalcATMMetaForceKernel::initialize(const System& system, const ATMMet
     displVector[i].z = dz;
     displVector[i].w = 0;
   }
-  const vector<int>& id = cl.getAtomIndex();
+  const vector<int>& id = cc.getAtomIndex();
   for (int i = 0; i < numParticles; i++){
     displVectorContext[i] = displVector[id[i]];
   }
-  displ = OpenCLArray::create<mm_float4>(cl, cl.getPaddedNumAtoms(), "displ");
-  displ->upload(displVectorContext);
+  displ = ComputeArray();
+  displ.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displ");
+  displ.upload(displVectorContext);
 
-  cl.addForce(new OpenCLForceInfo(1));
+  cc.addForce(new ComputeForceInfo());
 }
 
-void OpenCLCalcATMMetaForceKernel::initkernels(OpenMM::ContextImpl& context, OpenMM::ContextImpl& innerContext1, OpenMM::ContextImpl& innerContext2){
+void CommonCalcATMMetaForceKernel::initkernels(OpenMM::ContextImpl& context, OpenMM::ContextImpl& innerContext1, OpenMM::ContextImpl& innerContext2){
   if(! hasInitializedKernel) {
     hasInitializedKernel = true;
 
     //inner contexts
-    OpenCLContext& cl1 = *reinterpret_cast<OpenCLPlatform::PlatformData*>(innerContext1.getPlatformData())->contexts[0];
-    OpenCLContext& cl2 = *reinterpret_cast<OpenCLPlatform::PlatformData*>(innerContext2.getPlatformData())->contexts[0];
+    ComputeContext& cc1 = getInnerComputeContext(innerContext1);
+    ComputeContext& cc2 = getInnerComputeContext(innerContext2);
 
     //initialize the listener, this reorders the displacement vectors
-    ReorderListener* listener = new ReorderListener(cl, displVector, displ );
-    cl.addReorderListener(listener);
+    ReorderListener* listener = new ReorderListener(cc, displVector, displ );
+    cc.addReorderListener(listener);
     listener->execute();
 
     //create CopyState kernel
-    cl::Program program = cl.createProgram(OpenCLATMMetaForceKernelSources::atmmetaforce, "");
-    CopyStateKernel = cl::Kernel(program, "CopyState");
-    CopyStateKernel.setArg<cl_int>(0, numParticles);
-    int nargs = 0;
-    CopyStateKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
-    CopyStateKernel.setArg<cl::Buffer>(2, cl1.getPosq().getDeviceBuffer());
-    CopyStateKernel.setArg<cl::Buffer>(3, cl2.getPosq().getDeviceBuffer());
-    CopyStateKernel.setArg<cl::Buffer>(4, displ->getDeviceBuffer());
-    if(cl.getUseMixedPrecision()){
-      CopyStateKernel.setArg<cl::Buffer>(5, cl.getPosqCorrection().getDeviceBuffer());
-      CopyStateKernel.setArg<cl::Buffer>(6, cl1.getPosqCorrection().getDeviceBuffer());
-      CopyStateKernel.setArg<cl::Buffer>(7, cl2.getPosqCorrection().getDeviceBuffer());
+    ComputeProgram program = cc.compileProgram(CommonATMMetaForceKernelSources::atmmetaforce);
+    CopyStateKernel = program->createKernel("CopyState");
+    CopyStateKernel->addArg(numParticles);
+    CopyStateKernel->addArg( cc.getPosq());
+    CopyStateKernel->addArg(cc1.getPosq());
+    CopyStateKernel->addArg(cc2.getPosq());
+    CopyStateKernel->addArg(displ);
+    if(cc.getUseMixedPrecision()){
+      CopyStateKernel->addArg( cc.getPosqCorrection());
+      CopyStateKernel->addArg(cc1.getPosqCorrection());
+      CopyStateKernel->addArg(cc2.getPosqCorrection());
     }
 
     //create the HybridForce kernel
-    HybridForceKernel = cl::Kernel(program, "HybridForce");
-    HybridForceKernel.setArg<cl_int>(0, numParticles);
-    HybridForceKernel.setArg<cl::Buffer>(1, cl.getForce().getDeviceBuffer());
-    HybridForceKernel.setArg<cl::Buffer>(2, cl1.getForce().getDeviceBuffer());
-    HybridForceKernel.setArg<cl::Buffer>(3, cl2.getForce().getDeviceBuffer());
-    //there is a 4th argument (sp) which is added in execute()
+    float sp = 0;
+    HybridForceKernel = program->createKernel("HybridForce");
+    HybridForceKernel->addArg(numParticles);
+    HybridForceKernel->addArg(cc.getPaddedNumAtoms());
+    HybridForceKernel->addArg( cc.getLongForceBuffer());
+    HybridForceKernel->addArg(cc1.getLongForceBuffer());
+    HybridForceKernel->addArg(cc2.getLongForceBuffer());
+    HybridForceKernel->addArg(sp);//argument 5 (sp) is set in execute()
 
-    cl1.addForce(new OpenCLForceInfo(1));
-    cl2.addForce(new OpenCLForceInfo(1));
+    cc1.addForce(new ComputeForceInfo());
+    cc2.addForce(new ComputeForceInfo());
+    
   }
 }
 
-double OpenCLCalcATMMetaForceKernel::execute(OpenMM::ContextImpl& context,
+double CommonCalcATMMetaForceKernel::execute(OpenMM::ContextImpl& context,
 					     OpenMM::ContextImpl& innerContext1, OpenMM::ContextImpl& innerContext2,
 					     double State1Energy, double State2Energy,
 					     bool includeForces, bool includeEnergy ) {
@@ -189,16 +193,17 @@ double OpenCLCalcATMMetaForceKernel::execute(OpenMM::ContextImpl& context,
 
   //hybridize forces and add them to the system's forces
   float sp = alchemical_direction > 0 ? bfp*fp : 1. - bfp*fp;
-  HybridForceKernel.setArg<cl_float>(4, sp);
-  cl.executeKernel(HybridForceKernel, numParticles);
+  HybridForceKernel->setArg(5, sp);
+  HybridForceKernel->execute(numParticles);
   
   return (includeEnergy ? energy : 0.0);
 }
 
-void OpenCLCalcATMMetaForceKernel::copyState(OpenMM::ContextImpl& context,
+void CommonCalcATMMetaForceKernel::copyState(OpenMM::ContextImpl& context,
 					     OpenMM::ContextImpl& innerContext1, OpenMM::ContextImpl& innerContext2) {
   initkernels(context, innerContext1, innerContext2);
-  cl.executeKernel(CopyStateKernel, numParticles);
+
+  CopyStateKernel->execute(numParticles);
   
   Vec3 a, b, c;
   context.getPeriodicBoxVectors(a, b, c);
@@ -215,8 +220,7 @@ void OpenCLCalcATMMetaForceKernel::copyState(OpenMM::ContextImpl& context,
 }
 
 
-void OpenCLCalcATMMetaForceKernel::copyParametersToContext(ContextImpl& context, const ATMMetaForce& force) {
-  OpenCLContext& cl = *reinterpret_cast<OpenCLPlatform::PlatformData*>(context.getPlatformData())->contexts[0];
+void CommonCalcATMMetaForceKernel::copyParametersToContext(ContextImpl& context, const ATMMetaForce& force) {
   for (int i = 0; i < numParticles; i++){
     int particle;
     double dx, dy, dz;
@@ -226,9 +230,9 @@ void OpenCLCalcATMMetaForceKernel::copyParametersToContext(ContextImpl& context,
     displVector[i].z = dz;
     displVector[i].w = 0;
   }
-  const vector<int>& id = cl.getAtomIndex();
+  const vector<int>& id = cc.getAtomIndex();
   vector<mm_float4> displVectorContext(displVector);
-  for (int i = 0; i < cl.getPaddedNumAtoms(); i++){
+  for (int i = 0; i < cc.getPaddedNumAtoms(); i++){
     displVectorContext[i].x = 0;
     displVectorContext[i].y = 0;
     displVectorContext[i].z = 0;
@@ -237,5 +241,5 @@ void OpenCLCalcATMMetaForceKernel::copyParametersToContext(ContextImpl& context,
   for (int i = 0; i < numParticles; i++){
     displVectorContext[i] = displVector[id[i]];
   }
-  displ->upload(displVectorContext);
+  displ.upload(displVectorContext);
 }

@@ -105,21 +105,21 @@ double ATMMetaForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeF
   bool do_energy = true;
   ContextImpl& innercontextimpl1 = getContextImpl(*innerContext1);
   ContextImpl& innercontextimpl2 = getContextImpl(*innerContext2);
-
-  //copies the coordinates etc. from the context to the inner contexts 
+    
+  //copies the coordinates etc. from the context to the inner contexts
   kernel.getAs<CalcATMMetaForceKernel>().copyState(context, innercontextimpl1, innercontextimpl2);
- 
+
   //evaluate energy and force for original system, 4 = evaluate force group 2 (non-bonded)
   double State1Energy = innercontextimpl1.calcForcesAndEnergy(true, do_energy, 4);
-
+  
   //evaluate energy and force for the displaced system, 4 = evaluate force group 2 (non-bonded)
   double State2Energy = innercontextimpl2.calcForcesAndEnergy(true, do_energy, 4);
-
-  //evalaute the alchemical energy
+  
+  //evaluate the alchemical energy
   double energy = kernel.getAs<CalcATMMetaForceKernel>().execute(context,
-								 innercontextimpl1, innercontextimpl2,
-								 State1Energy, State2Energy,
-								 includeForces, includeEnergy);
+  								 innercontextimpl1, innercontextimpl2,
+  								 State1Energy, State2Energy,
+  								 includeForces, includeEnergy);
 
   //retrieve the perturbation energy
   PerturbationEnergy = kernel.getAs<CalcATMMetaForceKernel>().getPerturbationEnergy();

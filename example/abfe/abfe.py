@@ -58,11 +58,11 @@ kf = 25.0 * kilocalorie_per_mole/angstrom**2 #force constant for Vsite CM-CM res
 r0 = 5 * angstrom #radius of Vsite sphere
 
 #Vsite restraint
-atm_utils.addRestraintForce(lig_cm_particles = lig_atom_restr,
-                            rcpt_cm_particles = rcpt_atom_restr,
-                            kfcm = kf,
-                            tolcm = r0,
-                            offset = lig_restr_offset)
+#atm_utils.addRestraintForce(lig_cm_particles = lig_atom_restr,
+#                            rcpt_cm_particles = rcpt_atom_restr,
+#                            kfcm = kf,
+#                            tolcm = r0,
+#                            offset = lig_restr_offset)
 
 #receptor positional restraints
 fc = 25.0 * kilocalorie_per_mole/angstrom**2
@@ -91,7 +91,7 @@ MDstepsize = 0.001 * picosecond
 #add barostat, but disabled
 barostat = MonteCarloBarostat(1*bar, temperature)
 barostat.setForceGroup(1)
-barostat.setFrequency(0)#disabled
+barostat.setFrequency(10000000)#disabled
 system.addForce(barostat)
 
 integrator = LangevinIntegrator(temperature/kelvin, frictionCoeff/(1/picosecond), MDstepsize/ picosecond)
@@ -99,10 +99,11 @@ integrator.setIntegrationForceGroups({1,3})
 
 platform_name = 'OpenCL'
 #platform_name = 'Reference'
+#platform_name = 'CUDA'
 platform = Platform.getPlatformByName(platform_name)
 
 properties = {}
-properties["Precision"] = "mixed"
+#properties["Precision"] = "mixed"
 
 simulation = Simulation(prmtop.topology, system, integrator,platform, properties)
 print ("Using platform %s" % simulation.context.getPlatform().getName())
