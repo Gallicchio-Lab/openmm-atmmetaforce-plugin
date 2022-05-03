@@ -80,7 +80,7 @@ class ATMMetaForceUtils(object):
             numgroups = force.getNumGroups()
         force.addGroup(lig_cm_particles) #g1 CM of lig
         force.addGroup(rcpt_cm_particles) #g2 CM of rcpt
-        kfc = kfcm / (kilojoule_per_mole/radians**2)
+        kfc = kfcm / (kilojoule_per_mole/nanometer**2)
         tolc = tolcm / nanometer
         offv = offset / nanometer
         offx = offv[0]
