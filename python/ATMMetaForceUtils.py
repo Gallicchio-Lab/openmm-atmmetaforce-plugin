@@ -1,7 +1,7 @@
 %pythoncode %{
 import string
 import random
-from simtk.openmm import version as ommversion
+from openmm import version as ommversion
 
 class ATMMetaForceUtils(object):
 
@@ -16,29 +16,22 @@ class ATMMetaForceUtils(object):
         self.major_ommversion = int(ommversion.version.split(".")[0])
         self.minor_ommversion = int(ommversion.version.split(".")[1])
 
-    #place all existing forces in group 1, except for the non-bonded forces that go in group 2
+        if fix_zero_LJparams:
+            import re
+            nbpattern = re.compile(".*Nonbonded.*")
+            for force in self.system.getForces():
+                if nbpattern.match(str(type(force))):
+                    self.fixZeroLJParams(force)
+
+    #place non-bonded forces in the specified group
+    def setNonbondedForceGroup(self, group):
         import re
         nbpattern = re.compile(".*Nonbonded.*")
-        for force in system.getForces():
+        for force in self.system.getForces():
             if nbpattern.match(str(type(force))):
-                force.setForceGroup(2)
-                if fix_zero_LJparams:
-                    self.fixZeroLJParams(force)
-            else:
-                force.setForceGroup(1)
+                force.setForceGroup(group)
 
-    def _setRcptReferenceParticles(self, rcpt_ref_particles):
-        if len(rcpt_ref_particles) != 3:
-            raise ValueError("Invalid number of reference particles")
-        self.rcpt_ref_particles = rcpt_ref_particles
-
-    def _setLigReferenceParticles(self, lig_ref_particles):
-        if len(lig_ref_particles) != 3:
-            raise ValueError("Invalid number of reference particles")
-        if not all(x in self.ligparticles for x in lig_ref_particles):
-            raise ValueError("Invalid ligand atom indexes")
-        self.lig_ref_particles = lig_ref_particles
-
+    #compatibility call to addVsiteRestraintForceCMCM
     def addRestraintForce(self,
                           lig_cm_particles = None, rcpt_cm_particles = None,
                           kfcm = 0.0 * kilocalorie_per_mole/angstrom**2,
@@ -48,7 +41,6 @@ class ATMMetaForceUtils(object):
         res = self.addVsiteRestraintForceCMCM(lig_cm_particles, rcpt_cm_particles,
                                               kfcm, tolcm, offset)
         return res
-
 
     #
     # Adds restrains to keep the the CM of the ligand atoms around the CM of the receptor atoms
@@ -73,7 +65,6 @@ class ATMMetaForceUtils(object):
            force.addPerBondParameter("offy")
            force.addPerBondParameter("offz")
            numgroups = 0
-           force.setForceGroup(1)
            self.system.addForce(force)
         else:
             force = self.CMCMDistForce
@@ -204,7 +195,6 @@ class ATMMetaForceUtils(object):
             bondforce.addPerBondParameter("kf")
             bondforce.addPerBondParameter("r0")
             bondforce.addPerBondParameter("tol")
-            bondforce.setForceGroup(1)
             p0 = rcpt_ref_particles[0]
             p1 =  lig_ref_particles[0]
             kf = kfrA/(kilojoule_per_mole/nanometer**2)
@@ -225,7 +215,6 @@ class ATMMetaForceUtils(object):
             angleforce.addPerAngleParameter("kf")
             angleforce.addPerAngleParameter("a0")
             angleforce.addPerAngleParameter("b0")
-            angleforce.setForceGroup(1)
             if kfthA is not None:
                 kf = kfthA/(kilojoule_per_mole/radians**2)
                 a0 = (thA0 - thAtol)/radians
@@ -256,7 +245,6 @@ class ATMMetaForceUtils(object):
             torsforce.addPerTorsionParameter("kf")
             torsforce.addPerTorsionParameter("a0")
             torsforce.addPerTorsionParameter("b0")
-            torsforce.setForceGroup(1)
             if kfphA is not None:
                 kf = kfphA/(kilojoule_per_mole/radians**2)
                 a0 = (phA0 - phAtol)/radians
@@ -323,8 +311,6 @@ class ATMMetaForceUtils(object):
         displforce.addBond([ligb_ref_particles[0],liga_ref_particles[0]] ,
                            [kfdispl/((kilojoule_per_mole/nanometer**2)),
                             offx, offy, offz])
-        displforce.setForceGroup(1);
-
 
         expr = "(ktheta/2) * (1 - cost) ;" #theta restraint
 
@@ -345,7 +331,6 @@ class ATMMetaForceUtils(object):
         thetaforce.addPerBondParameter("ktheta")
         thetaforce.addBond([ligb_ref_particles[0],ligb_ref_particles[1],liga_ref_particles[0],liga_ref_particles[1] ] ,
                            [ktheta/kilojoule_per_mole])
-        thetaforce.setForceGroup(1);
 
         expr = "(kpsi/2) * (1 - cosp) ;" #psi restraint
 
@@ -383,7 +368,6 @@ class ATMMetaForceUtils(object):
         psiforce.addBond([liga_ref_particles[0],liga_ref_particles[1],liga_ref_particles[2],
                           ligb_ref_particles[0],ligb_ref_particles[2] ] ,
                          [0.5*kpsi/kilojoule_per_mole])
-        psiforce.setForceGroup(1)
         return (displforce, thetaforce, psiforce )
 
     # restrain angle between alignment z-axes defined by centroids
@@ -419,7 +403,6 @@ class ATMMetaForceUtils(object):
                thetaforce.addPerBondParameter("kf")
                thetaforce.addPerBondParameter("cos0")
                thetaforce.addPerBondParameter("ctol")
-               thetaforce.setForceGroup(1)
                self.system.addForce(thetaforce)
             else:
                 thetaforce = self.CMAngleThetaForce
@@ -457,7 +440,6 @@ class ATMMetaForceUtils(object):
                phiforce.addPerBondParameter("kf")
                phiforce.addPerBondParameter("a0")
                phiforce.addPerBondParameter("b0")
-               phiforce.setForceGroup(1)
                self.system.addForce(phiforce)
             else:
                 phiforce = self.CMAnglePhiForce
@@ -494,7 +476,6 @@ class ATMMetaForceUtils(object):
                psiforce.addPerBondParameter("kf")
                psiforce.addPerBondParameter("a0")
                psiforce.addPerBondParameter("b0")
-               psiforce.setForceGroup(1)
                self.system.addForce(psiforce)
             else:
                 psiforce = self.CMAnglePsiForce
@@ -525,8 +506,6 @@ class ATMMetaForceUtils(object):
         posrestforce.addPerParticleParameter("z0")
         posrestforce.addPerParticleParameter("fc")
         posrestforce.addPerParticleParameter("tol")
-
-        posrestforce.setForceGroup(1)
 
         self.system.addForce(posrestforce)
 

@@ -29,7 +29,7 @@ ATMMetaForceImpl::ATMMetaForceImpl(const ATMMetaForce& owner) : owner(owner), in
 ATMMetaForceImpl::~ATMMetaForceImpl() {
 }
 
-static void copysystem(const OpenMM::System& system, OpenMM::System& innerSystem){
+void ATMMetaForceImpl::copysystem(const OpenMM::System& system, OpenMM::System& innerSystem){
   
   //copy particles
   for (int i = 0; i < system.getNumParticles(); i++) 
@@ -43,19 +43,18 @@ static void copysystem(const OpenMM::System& system, OpenMM::System& innerSystem
     innerSystem.addConstraint(particle1, particle2, distance);
   }
 
+  //copy periodic box dimensions
   Vec3 a, b, c;
   system.getDefaultPeriodicBoxVectors(a, b, c);
   innerSystem.setDefaultPeriodicBoxVectors(a, b, c);
-  
-  //add non-bonded force
+
+  //add system forces other than those belonging to the ATMMetaForce group to the inner contexts
+  int atmforcegroup = owner.getForceGroup();
   int numforces = system.getNumForces();
   for (int i=0; i<numforces; i++){
     const Force &force = system.getForce(i);
     int group = force.getForceGroup();
-    // add to the inner contexts both bonded (group 1) and non-bonded (group 2) forces
-    // the bonded forces are not calculated but they are included to help define molecules
-    // for atom reordering
-    if(group == 1 || group == 2){
+    if (group != atmforcegroup){
       Force* newforce = XmlSerializer::clone<Force>(force);
       newforce->setForceGroup(group);
       NonbondedForce* nonbonded = dynamic_cast<NonbondedForce*>(newforce);
@@ -70,13 +69,15 @@ static void copysystem(const OpenMM::System& system, OpenMM::System& innerSystem
 void ATMMetaForceImpl::initialize(ContextImpl& context) {
   const OpenMM::System& system = context.getSystem();
 
-  int numforces = system.getNumForces();
-  for (int i=0; i<numforces; i++){
-    const Force &force = system.getForce(i);
-    int group = force.getForceGroup();
-    if (!(group == 1 || group == 2 || group == 3)){
-      throw OpenMMException("The ATM Meta Force requires all forces to be either in force group 1 (bonded), group 2 (nonbonded) or group 3 (ATM Meta Force)");
-    }
+  int atmforcegroup = owner.getForceGroup();
+
+  // only forces in designated force groups are evaluated in the inner contexts
+  variable_force_groups_mask = 0;
+  vector<int> varforcegroups = owner.getVariableForceGroups();
+  for (int i=0; i<varforcegroups.size() ; i++){
+    if(varforcegroups[i] == atmforcegroup)
+      throw OpenMMException("The ATM Meta Force group cannot be one of the variable force groups.");
+    variable_force_groups_mask += 1<<varforcegroups[i];
   }
 
   copysystem(system, innerSystem1);
@@ -99,21 +100,20 @@ double ATMMetaForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeF
     innerContext2->setPositions(pos);
   }
 
-  
   if ((groups&(1<<owner.getForceGroup())) == 0) return 0.0;
   
   bool do_energy = true;
   ContextImpl& innercontextimpl1 = getContextImpl(*innerContext1);
   ContextImpl& innercontextimpl2 = getContextImpl(*innerContext2);
-    
+
   //copies the coordinates etc. from the context to the inner contexts
   kernel.getAs<CalcATMMetaForceKernel>().copyState(context, innercontextimpl1, innercontextimpl2);
 
-  //evaluate energy and force for original system, 4 = evaluate force group 2 (non-bonded)
-  double State1Energy = innercontextimpl1.calcForcesAndEnergy(true, do_energy, 4);
+  //evaluate variable energy and forces for original system
+  double State1Energy = innercontextimpl1.calcForcesAndEnergy(true, do_energy, variable_force_groups_mask);
   
-  //evaluate energy and force for the displaced system, 4 = evaluate force group 2 (non-bonded)
-  double State2Energy = innercontextimpl2.calcForcesAndEnergy(true, do_energy, 4);
+  //evaluate variable energy and force for the displaced system
+  double State2Energy = innercontextimpl2.calcForcesAndEnergy(true, do_energy, variable_force_groups_mask);
   
   //evaluate the alchemical energy
   double energy = kernel.getAs<CalcATMMetaForceKernel>().execute(context,

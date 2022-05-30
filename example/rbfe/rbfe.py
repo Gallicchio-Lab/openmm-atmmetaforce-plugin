@@ -1,8 +1,8 @@
 from __future__ import print_function
 
-from simtk import openmm as mm
-from simtk.openmm.app import *
-from simtk.openmm import *
+import openmm as mm
+from openmm.app import *
+from openmm import *
 from simtk.unit import *
 from sys import stdout
 import os, re,time, shutil, math
@@ -82,18 +82,18 @@ kfdihedral2 = None * kilocalorie_per_mole/degrees**2
 dihedral2tol = None * degrees
 
 #Vsite restraint for lig1
-atm_utils.addRestraintForce(lig_cm_particles = lig1_atom_restr,
-                            rcpt_cm_particles = rcpt_atom_restr,
-                            kfcm = kf,
-                            tolcm = r0,
-                            offset = lig1_restr_offset)
+atm_utils.addVsiteRestraintForceCMCM(lig_cm_particles = lig1_atom_restr,
+                                     rcpt_cm_particles = rcpt_atom_restr,
+                                     kfcm = kf,
+                                     tolcm = r0,
+                                     offset = lig1_restr_offset)
 
 #Vsite restraint for lig2 (offset into the bulk position)
-atm_utils.addRestraintForce(lig_cm_particles = lig2_atom_restr,
-                            rcpt_cm_particles = rcpt_atom_restr,
-                            kfcm = kf,
-                            tolcm = r0,
-                            offset = lig2_restr_offset)
+atm_utils.addVsiteRestraintForceCMCM(lig_cm_particles = lig2_atom_restr,
+                                     rcpt_cm_particles = rcpt_atom_restr,
+                                     kfcm = kf,
+                                     tolcm = r0,
+                                     offset = lig2_restr_offset)
 
 #alignment restraints between lig1 and lig2
 lig1_ref_atoms  = [ refatoms_lig1[i]+lig1_atoms[0] for i in range(3)]
@@ -117,14 +117,18 @@ for at in prmtop.topology.atoms():
 atm_utils.addPosRestraints(posrestr_atoms, inpcrd.positions, fc, tol)
 
 #create ATM Force
-atmforce = ATMMetaForce(lambda1, lambda2,  alpha * kilojoules_per_mole, u0/kilojoules_per_mole, w0coeff/kilojoules_per_mole, umsc/kilojoules_per_mole, ubcore/kilojoules_per_mole, acore, direction )
+atmforcegroup = 2
+nonbonded_force_group = 1
+atm_utils.setNonbondedForceGroup(nonbonded_force_group)
+atmvariableforcegroups = [nonbonded_force_group]
+atmforce = ATMMetaForce(lambda1, lambda2,  alpha * kilojoules_per_mole, u0/kilojoules_per_mole, w0coeff/kilojoules_per_mole, umsc/kilojoules_per_mole, ubcore/kilojoules_per_mole, acore, direction, atmvariableforcegroups )
 for at in prmtop.topology.atoms():
     atmforce.addParticle(at.index, 0., 0., 0.)
 for i in lig1_atoms:
     atmforce.setParticleParameters(i, i, displ[0] * angstrom, displ[1] * angstrom, displ[2] * angstrom)
 for i in lig2_atoms:
     atmforce.setParticleParameters(i, i, -displ[0] * angstrom, -displ[1] * angstrom, -displ[2] * angstrom)
-atmforce.setForceGroup(3)
+atmforce.setForceGroup(atmforcegroup)
 system.addForce(atmforce)
 
 #setup integrator
@@ -134,16 +138,15 @@ MDstepsize = 0.001 * picosecond
 
 #add barostat but turned off, needed to load checkopoint file written with NPT
 barostat = MonteCarloBarostat(1*bar, temperature)
-barostat.setForceGroup(1)
 barostat.setFrequency(0)#disabled
 system.addForce(barostat)
 
 integrator = LangevinIntegrator(temperature/kelvin, frictionCoeff/(1/picosecond), MDstepsize/ picosecond)
-integrator.setIntegrationForceGroups({1,3})
+integrator.setIntegrationForceGroups({0,atmforcegroup})
 
-#platform_name = 'OpenCL'
+platform_name = 'OpenCL'
 #platform_name = 'Reference'
-platform_name = 'CUDA'
+#platform_name = 'CUDA'
 platform = Platform.getPlatformByName(platform_name)
 
 properties = {}
@@ -156,9 +159,9 @@ if inpcrd.boxVectors is not None:
     simulation.context.setPeriodicBoxVectors(*inpcrd.boxVectors)
 
 #one preliminary energy evaluation seems to be required to init the energy routines
-state = simulation.context.getState(getEnergy = True, groups = {1,3})
+state = simulation.context.getState(getEnergy = True, groups = {0,atmforcegroup})
 pote = state.getPotentialEnergy()
-    
+
 print( "Load checkpoint file ...")
 simulation.loadState(jobname + '-equil.xml')
 
@@ -173,7 +176,7 @@ simulation.context.setParameter(atmforce.Ubcore(), ubcore /kilojoules_per_mole)
 simulation.context.setParameter(atmforce.Acore(), acore)
 simulation.context.setParameter(atmforce.Direction(), direction)
 
-state = simulation.context.getState(getEnergy = True, groups = {1,3})
+state = simulation.context.getState(getEnergy = True, groups = {0,atmforcegroup})
 print("Potential Energy = ", state.getPotentialEnergy())
 
 print("Leg1 production at lambda = %f ..." % lmbd)
@@ -189,7 +192,7 @@ f = open(binding_file, 'w')
 
 for i in range(loopStep):
     simulation.step(stepId)
-    state = simulation.context.getState(getEnergy = True, groups = {1,3})
+    state = simulation.context.getState(getEnergy = True, groups = {0,atmforcegroup})
     pot_energy = (state.getPotentialEnergy()).value_in_unit(kilocalorie_per_mole)
     pert_energy = (atmforce.getPerturbationEnergy(simulation.context)).value_in_unit(kilocalorie_per_mole)
     l1 = simulation.context.getParameter(atmforce.Lambda1())

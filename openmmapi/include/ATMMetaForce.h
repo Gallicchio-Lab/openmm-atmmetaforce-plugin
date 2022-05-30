@@ -49,17 +49,9 @@ public:
     /**
      * Create an ATMMetaForce.
      */
-    ATMMetaForce(double Lambda) :
-     defaultLambda1(Lambda), defaultLambda2(Lambda), defaultAlpha(0.0), defaultU0(0.), defaultW0(0.),
-       defaultUmax(400.), defaultUbcore(200.), defaultAcore(0.0625), defaultDirection(1.0) {
-     }
-    ATMMetaForce(double Lambda1, double Lambda2, double Alpha, double U0, double W0, double Umax, double Ubcore, double Acore) :
+ ATMMetaForce(double Lambda1, double Lambda2, double Alpha, double U0, double W0, double Umax, double Ubcore, double Acore, double direction, const std::vector<int>& VariableForceGroups) :
      defaultLambda1(Lambda1), defaultLambda2(Lambda2), defaultAlpha(Alpha), defaultU0(U0), defaultW0(W0),
-       defaultUmax(Umax), defaultUbcore(Ubcore), defaultAcore(Acore), defaultDirection(1.0) {
-     }
-    ATMMetaForce(double Lambda1, double Lambda2, double Alpha, double U0, double W0, double Umax, double Ubcore, double Acore, double direction) :
-     defaultLambda1(Lambda1), defaultLambda2(Lambda2), defaultAlpha(Alpha), defaultU0(U0), defaultW0(W0),
-       defaultUmax(Umax), defaultUbcore(Ubcore), defaultAcore(Acore), defaultDirection(direction) {
+       defaultUmax(Umax), defaultUbcore(Ubcore), defaultAcore(Acore), defaultDirection(direction), VariableForceGroups(VariableForceGroups) {
      }
     /**
      * Get the number of particles
@@ -183,6 +175,10 @@ public:
     double getDefaultDirection() const {
         return defaultDirection;
     }
+
+    const std::vector<int>& getVariableForceGroups() const {
+      return VariableForceGroups;
+    }
     
 protected:
   OpenMM::ForceImpl* createImpl() const;
@@ -196,6 +192,10 @@ private:
     double defaultUmax, defaultUbcore, defaultAcore;
     //alchemical direction parameter
     double defaultDirection;
+
+    //the forces that are recalculated after the coordinate transformation
+    std::vector<int> VariableForceGroups;
+
 };
 
 /**

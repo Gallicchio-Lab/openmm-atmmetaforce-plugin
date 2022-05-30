@@ -42,6 +42,7 @@ public:
     double getPerturbationEnergy() const {
        return PerturbationEnergy;
     }
+
 private:
     const ATMMetaForce& owner;
     OpenMM::Kernel kernel;
@@ -50,6 +51,8 @@ private:
     OpenMM::Context *innerContext1, *innerContext2;
     double PerturbationEnergy;
     bool hasInitializedInnerContexts;
+    int variable_force_groups_mask;
+    void copysystem(const OpenMM::System& system, OpenMM::System& innerSystem);
 };
 
 } // namespace ATMMetaPlugin

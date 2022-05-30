@@ -62,9 +62,7 @@ namespace ATMMetaForcePlugin {
 
 class ATMMetaForce : public OpenMM::Force {
 public:
-    ATMMetaForce(double Lambda);
-    ATMMetaForce(double Lambda1, double Lambda2, double Alpha, double U0, double W0, double Umax, double Ubcore, double Acore);
-    ATMMetaForce(double Lambda1, double Lambda2, double Alpha, double U0, double W0, double Umax, double Ubcore, double Acore, double direction);
+  ATMMetaForce(double Lambda1, double Lambda2, double Alpha, double U0, double W0, double Umax, double Ubcore, double Acore, double direction, const std::vector<int>& VariableForceGroups);
 
     int getNumParticles() const;
     int addParticle(int particle, double dx, double dy, double dz);
@@ -106,7 +104,7 @@ public:
     double getDefaultUbcore() const;
     double getDefaultAcore() const;
     double getDefaultDirection() const;
-
+    const std::vector<int>& getVariableForceGroups() const;
     /*
      * Add methods for casting a Force to an ATMMetaForce.
     */

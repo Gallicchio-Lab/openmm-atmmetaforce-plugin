@@ -58,11 +58,11 @@ kf = 25.0 * kilocalorie_per_mole/angstrom**2 #force constant for Vsite CM-CM res
 r0 = 5 * angstrom #radius of Vsite sphere
 
 #Vsite restraint
-#atm_utils.addRestraintForce(lig_cm_particles = lig_atom_restr,
-#                            rcpt_cm_particles = rcpt_atom_restr,
-#                            kfcm = kf,
-#                            tolcm = r0,
-#                            offset = lig_restr_offset)
+atm_utils.addVsiteRestraintForceCMCM(lig_cm_particles = lig_atom_restr,
+                                     rcpt_cm_particles = rcpt_atom_restr,
+                                     kfcm = kf,
+                                     tolcm = r0,
+                                     offset = lig_restr_offset)
 
 #receptor positional restraints
 fc = 25.0 * kilocalorie_per_mole/angstrom**2
@@ -75,12 +75,16 @@ for at in prmtop.topology.atoms():
 atm_utils.addPosRestraints(posrestr_atoms, inpcrd.positions, fc, tol)
         
 #create ATM Force
-atmforce = ATMMetaForce(lambda1, lambda2,  alpha * kilojoules_per_mole, u0/kilojoules_per_mole, w0coeff/kilojoules_per_mole, umsc/kilojoules_per_mole, ubcore/kilojoules_per_mole, acore, direction )
+atmforcegroup = 2
+nonbonded_force_group = 1
+atm_utils.setNonbondedForceGroup(nonbonded_force_group)
+atmvariableforcegroups = [nonbonded_force_group]
+atmforce = ATMMetaForce(lambda1, lambda2,  alpha * kilojoules_per_mole, u0/kilojoules_per_mole, w0coeff/kilojoules_per_mole, umsc/kilojoules_per_mole, ubcore/kilojoules_per_mole, acore, direction, atmvariableforcegroups )
 for at in prmtop.topology.atoms():
     atmforce.addParticle(at.index, 0., 0., 0.)
 for i in lig_atoms:
     atmforce.setParticleParameters(i, i, displ[0] * angstrom, displ[1] * angstrom, displ[2] * angstrom)
-atmforce.setForceGroup(3)
+atmforce.setForceGroup(atmforcegroup)
 system.addForce(atmforce)
 
 #set up the integrator
@@ -90,12 +94,11 @@ MDstepsize = 0.001 * picosecond
 
 #add barostat, but disabled
 barostat = MonteCarloBarostat(1*bar, temperature)
-barostat.setForceGroup(1)
 barostat.setFrequency(10000000)#disabled
 system.addForce(barostat)
 
 integrator = LangevinIntegrator(temperature/kelvin, frictionCoeff/(1/picosecond), MDstepsize/ picosecond)
-integrator.setIntegrationForceGroups({1,3})
+integrator.setIntegrationForceGroups({0,atmforcegroup})
 
 platform_name = 'OpenCL'
 #platform_name = 'Reference'
@@ -103,7 +106,7 @@ platform_name = 'OpenCL'
 platform = Platform.getPlatformByName(platform_name)
 
 properties = {}
-#properties["Precision"] = "mixed"
+properties["Precision"] = "mixed"
 
 simulation = Simulation(prmtop.topology, system, integrator,platform, properties)
 print ("Using platform %s" % simulation.context.getPlatform().getName())
@@ -111,7 +114,7 @@ simulation.context.setPositions(inpcrd.positions)
 if inpcrd.boxVectors is not None:
     simulation.context.setPeriodicBoxVectors(*inpcrd.boxVectors)
 
-state = simulation.context.getState(getEnergy = True, groups = {1,3})
+state = simulation.context.getState(getEnergy = True, groups = {0,atmforcegroup})
 pote = state.getPotentialEnergy()
 
 print( "LoadState ...")
@@ -128,7 +131,7 @@ simulation.context.setParameter(atmforce.Ubcore(), ubcore /kilojoules_per_mole)
 simulation.context.setParameter(atmforce.Acore(), acore)
 simulation.context.setParameter(atmforce.Direction(), acore)
 
-state = simulation.context.getState(getEnergy = True, groups = {1,3})
+state = simulation.context.getState(getEnergy = True, groups = {0,atmforcegroup})
 print("Potential Energy =", state.getPotentialEnergy())
 
 print("Leg1 production at lambda = %f ..." % lmbd)
@@ -144,7 +147,7 @@ f = open(binding_file, 'w')
 
 for i in range(loopStep):
     simulation.step(stepId)
-    state = simulation.context.getState(getEnergy = True, groups = {1,3})
+    state = simulation.context.getState(getEnergy = True, groups = {0,atmforcegroup})
     pot_energy = (state.getPotentialEnergy()).value_in_unit(kilocalorie_per_mole)
     pert_energy = (atmforce.getPerturbationEnergy(simulation.context)).value_in_unit(kilocalorie_per_mole)
     l1 = simulation.context.getParameter(atmforce.Lambda1())
