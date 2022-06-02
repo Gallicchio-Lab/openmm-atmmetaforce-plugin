@@ -130,6 +130,7 @@ for i in lig2_atoms:
     atmforce.setParticleParameters(i, i, -displ[0] * angstrom, -displ[1] * angstrom, -displ[2] * angstrom)
 atmforce.setForceGroup(atmforcegroup)
 system.addForce(atmforce)
+print("Using ATM Meta Force plugin version = %s" % ATMMETAFORCE_VERSION)
 
 #setup integrator
 temperature = 300 * kelvin

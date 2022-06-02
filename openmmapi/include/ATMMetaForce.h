@@ -37,6 +37,7 @@
 #include <vector>
 #include <string>
 #include "internal/windowsExportATMMetaForce.h"
+#include "ATMMetaForceVersion.h"
 
 namespace ATMMetaForcePlugin {
 
@@ -145,6 +146,12 @@ public:
         return key;
     }
 
+    static const std::string& Version() {
+      //version id
+      static const std::string version = ATMMETAFORCE_VERSION ;
+      return version;
+    }
+    
     /**
      *  default values of the parameters
      */
@@ -179,7 +186,7 @@ public:
     const std::vector<int>& getVariableForceGroups() const {
       return VariableForceGroups;
     }
-    
+
 protected:
   OpenMM::ForceImpl* createImpl() const;
 private:

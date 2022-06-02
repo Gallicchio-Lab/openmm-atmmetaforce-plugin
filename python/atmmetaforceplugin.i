@@ -2,7 +2,8 @@
 
 %import(module="simtk.openmm") "swig/OpenMMSwigHeaders.i"
 %include "swig/typemaps.i"
-
+%include <std_string.i>
+  
 /*
  * The following lines are needed to handle std::vector.
  * Similar lines may be needed for vectors of vectors or
@@ -30,6 +31,7 @@ from simtk.unit import *
 import math
 %}
 
+%include "ATMMetaForceVersion.h"
 %include "ATMMetaForceUtils.py"
 
 /* 
@@ -94,6 +96,7 @@ public:
     static const std::string& Ubcore();
     static const std::string& Acore();
     static const std::string& Direction();
+    static const std::string& Version();
 
     double getDefaultLambda1() const;
     double getDefaultLambda2() const;
