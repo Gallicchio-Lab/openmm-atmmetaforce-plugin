@@ -1,6 +1,7 @@
 %pythoncode %{
 import string
 import random
+import numpy as np
 from simtk.openmm import version as ommversion
 
 class ATMMetaForceUtils(object):
@@ -88,7 +89,7 @@ class ATMMetaForceUtils(object):
         offz = offv[2]
         groups = [numgroups + 0, numgroups + 1]
         params = [kfc, tolc, offx, offy, offz]
-        force.addBond(groups, params)
+        force.addBond(groups, np.array(params, dtype=np.double))
         return force
 
     def _roundExpression(self, n, x):
@@ -210,7 +211,7 @@ class ATMMetaForceUtils(object):
             kf = kfrA/(kilojoule_per_mole/nanometer**2)
             r0 = rA0/nanometer
             tol = rAtol/nanometer
-            bondforce.addBond([p0,p1], [kf, r0, tol ])
+            bondforce.addBond([p0,p1], np.array([kf, r0, tol ], dtype=np.double))
             self.system.addForce(bondforce)
 
         angleforce = None
@@ -233,7 +234,7 @@ class ATMMetaForceUtils(object):
                 p0 = rcpt_ref_particles[1]
                 p1 = rcpt_ref_particles[0]
                 p2 =  lig_ref_particles[0]
-                angleforce.addAngle([p0,p1,p2], [kf,a0,b0])
+                angleforce.addAngle([p0,p1,p2], np.array([kf,a0,b0], dtype=np.double) )
             if kfthB is not None:
                 kf = kfthB/(kilojoule_per_mole/radians**2)
                 a0 = (thB0 - thBtol)/radians
@@ -241,7 +242,7 @@ class ATMMetaForceUtils(object):
                 p0 = rcpt_ref_particles[0]
                 p1 =  lig_ref_particles[0]
                 p2 =  lig_ref_particles[1]
-                angleforce.addAngle([p0,p1,p2], [kf,a0,b0])
+                angleforce.addAngle([p0,p1,p2], np.array([kf,a0,b0], dtype=np.double) )
             self.system.addForce(angleforce)
 
         torsforce = None
@@ -265,7 +266,7 @@ class ATMMetaForceUtils(object):
                 p1 = rcpt_ref_particles[1]
                 p2 = rcpt_ref_particles[0]
                 p3 =  lig_ref_particles[0]
-                torsforce.addTorsion([p0,p1,p2,p3], [kf,a0,b0])
+                torsforce.addTorsion([p0,p1,p2,p3], np.array([kf,a0,b0], dtype=np.double) )
             if kfphB is not None:
                 kf = kfphB/(kilojoule_per_mole/radians**2)
                 a0 = (phB0 - phBtol)/radians
@@ -274,7 +275,7 @@ class ATMMetaForceUtils(object):
                 p1 = rcpt_ref_particles[0]
                 p2 =  lig_ref_particles[0]
                 p3 =  lig_ref_particles[1]
-                torsforce.addTorsion([p0,p1,p2,p3], [kf,a0,b0])
+                torsforce.addTorsion([p0,p1,p2,p3], np.array([kf,a0,b0], dtype=np.double) )
             if kfphC is not None:
                 kf = kfphC/(kilojoule_per_mole/radians**2)
                 a0 = (phC0 - phCtol)/radians
@@ -283,7 +284,7 @@ class ATMMetaForceUtils(object):
                 p1 =  lig_ref_particles[0]
                 p2 =  lig_ref_particles[1]
                 p3 =  lig_ref_particles[2]
-                torsforce.addTorsion([p0,p1,p2,p3], [kf,a0,b0])
+                torsforce.addTorsion([p0,p1,p2,p3], np.array([kf,a0,b0], dtype=np.double) )
             self.system.addForce(torsforce)
 
         return (bondforce, angleforce, torsforce)
@@ -321,8 +322,8 @@ class ATMMetaForceUtils(object):
         offy = offv[1]
         offz = offv[2]
         displforce.addBond([ligb_ref_particles[0],liga_ref_particles[0]] ,
-                           [kfdispl/((kilojoule_per_mole/nanometer**2)),
-                            offx, offy, offz])
+                           np.array([kfdispl/((kilojoule_per_mole/nanometer**2)),
+                                     offx, offy, offz], dtype=np.double) )
         displforce.setForceGroup(1);
 
 
@@ -344,7 +345,7 @@ class ATMMetaForceUtils(object):
         self.system.addForce(thetaforce)
         thetaforce.addPerBondParameter("ktheta")
         thetaforce.addBond([ligb_ref_particles[0],ligb_ref_particles[1],liga_ref_particles[0],liga_ref_particles[1] ] ,
-                           [ktheta/kilojoule_per_mole])
+                           np.array([ktheta/kilojoule_per_mole], dtype=np.double) )
         thetaforce.setForceGroup(1);
 
         expr = "(kpsi/2) * (1 - cosp) ;" #psi restraint
@@ -379,10 +380,10 @@ class ATMMetaForceUtils(object):
         psiforce.addPerBondParameter("kpsi")
         psiforce.addBond([ligb_ref_particles[0],ligb_ref_particles[1],ligb_ref_particles[2],
                           liga_ref_particles[0],liga_ref_particles[2] ] ,
-                           [0.5*kpsi/kilojoule_per_mole])
+                         np.array([0.5*kpsi/kilojoule_per_mole], dtype=np.double) )
         psiforce.addBond([liga_ref_particles[0],liga_ref_particles[1],liga_ref_particles[2],
                           ligb_ref_particles[0],ligb_ref_particles[2] ] ,
-                         [0.5*kpsi/kilojoule_per_mole])
+                         np.array([0.5*kpsi/kilojoule_per_mole], dtype=np.double) )
         psiforce.setForceGroup(1)
         return (displforce, thetaforce, psiforce )
 
@@ -434,7 +435,7 @@ class ATMMetaForceUtils(object):
             b0 = min(math.pi, (theta0+thetatol)/radians)
             ctol = abs(math.cos(a0) - math.cos(b0))
             groupids = [ numthetagroups + i for i in range(4) ]
-            thetaforce.addBond(groupids, [kf, cos0, ctol])
+            thetaforce.addBond(groupids, np.array([kf, cos0, ctol], dtype=np.double )  )
 
         #phi restraint
         # (kf/2) (phi - phi0)^2 with a tolerance and periodicity
@@ -471,7 +472,7 @@ class ATMMetaForceUtils(object):
             a0 = (phi0-phitol)/radians
             b0 = (phi0+phitol)/radians
             groupids = [ numphigroups + i for i in range(5) ]
-            phiforce.addBond(groupids, [kf, a0, b0])
+            phiforce.addBond(groupids, np.array([kf, a0, b0], dtype=np.double) )
 
         #psi restraint
         # (kf/2) (psi - psi0)^2 with a tolerance and periodicity
@@ -508,7 +509,7 @@ class ATMMetaForceUtils(object):
             a0 = (psi0-psitol)/radians
             b0 = (psi0+psitol)/radians
             groupids = [ numpsigroups + i for i in range(5) ]
-            psiforce.addBond(groupids, [kf, a0, b0])
+            psiforce.addBond(groupids, np.array([kf, a0, b0], dtype=np.double) )
         return (thetaforce, phiforce, psiforce)
 
     # applies flat-bottom restraints to a set of atoms based on a set of reference positions
@@ -531,10 +532,12 @@ class ATMMetaForceUtils(object):
         self.system.addForce(posrestforce)
 
         for p in particles:
-            x0 = refpos[p][0]
-            y0 = refpos[p][1]
-            z0 = refpos[p][2]
-            posrestforce.addParticle(p, [x0, y0, z0, fc, tol])
+            x0 = refpos[p][0]/nanometer
+            y0 = refpos[p][1]/nanometer
+            z0 = refpos[p][2]/nanometer
+            fc1 = fc/(kilojoule_per_mole/nanometer**2)
+            tol1 = tol/nanometer
+            posrestforce.addParticle(p, np.array([x0, y0, z0, fc1, tol1], dtype=np.double)  )
         return posrestforce
 
     #fix zero LJs
