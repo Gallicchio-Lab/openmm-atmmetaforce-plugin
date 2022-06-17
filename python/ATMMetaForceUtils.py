@@ -4,9 +4,29 @@ import random
 import numpy as np
 from openmm import version as ommversion
 
-class ATMMetaForceUtils(object):
 
+class ATMMetaForceUtils(object):
+    """
+    ATM Meta Force python utilities module
+    """
+    
     def __init__(self, system, fix_zero_LJparams = True):
+        """
+        Creates an ATMMetaForceUtils object.
+
+        Parameters
+        ----------
+        system : System
+            The OpenMM System to operate upon
+        fix_zero_LJparams: bool
+            Whether to fix atoms with zero LJ parameters
+        
+        Returns
+        -------
+        An ATMMetaForceUtils object
+
+        """
+
         self.system = system
 
         self.CMCMDistForce = None
@@ -24,20 +44,29 @@ class ATMMetaForceUtils(object):
                 if nbpattern.match(str(type(force))):
                     self.fixZeroLJParams(force)
 
-    #place non-bonded forces in the specified group
     def setNonbondedForceGroup(self, group):
-        import re
-        nbpattern = re.compile(".*Nonbonded.*")
-        for force in self.system.getForces():
-            if nbpattern.match(str(type(force))):
-                force.setForceGroup(group)
+       """
+       Places the non-bonded Forces in the specified group
 
-    #compatibility call to addVsiteRestraintForceCMCM
+       Parameters
+       ----------
+       group : int
+           The group id to assign to the non-bonded Forces
+       """
+       import re
+       nbpattern = re.compile(".*Nonbonded.*")
+       for force in self.system.getForces():
+           if nbpattern.match(str(type(force))):
+               force.setForceGroup(group)
+
     def addRestraintForce(self,
                           lig_cm_particles = None, rcpt_cm_particles = None,
                           kfcm = 0.0 * kilocalorie_per_mole/angstrom**2,
                           tolcm = 0.0 * angstrom,
                           offset = [0., 0., 0.] * angstrom):
+        """
+        Deprecated function. Calls addVsiteRestraintForceCMCM()
+        """ 
         print("warning: AddRestraintForce() is deprecated. Use addVsiteRestraintForceCMCM()")
         res = self.addVsiteRestraintForceCMCM(lig_cm_particles, rcpt_cm_particles,
                                               kfcm, tolcm, offset)
@@ -51,6 +80,30 @@ class ATMMetaForceUtils(object):
                           kfcm = 0.0 * kilocalorie_per_mole/angstrom**2,
                           tolcm = 0.0 * angstrom,
                           offset = [0., 0., 0.] * angstrom):
+        """
+        Adds a flat-bottom quadratic potential restraint to keep the the CM of the ligand atoms 
+        near the CM of the receptor atoms. This potential is used to define the spatial extent of
+        the binding site.
+        
+        Parameters
+        ----------
+        lig_cm_particles: list of ints
+            List of the indexes of the atoms that define the CM of the ligand molecule
+        rcpt_cm_particles : list of ints
+            List of the indexes of the atoms that define the CM of the receptor molecule
+        kfcm : Quantity in energy/distance^2 units
+            Force constant of the quadratic potential
+        tolcm : Quantity in distance units
+            Tolerance of the flat-bottom restraint
+        offset : List of 3 Quantity's in distance units
+            Center of the restraint. The potential is applied to the CM-CM distance after subtracting offset.
+            It is used to keep the CM-CM distance near offset.
+
+        Returns
+        -------
+        The CM-CM restraint Force object added to the OpenMM system
+
+        """
         assert len(lig_cm_particles) > 0
         assert len(rcpt_cm_particles) > 0
 
@@ -277,19 +330,49 @@ class ATMMetaForceUtils(object):
 
         return (bondforce, angleforce, torsforce)
 
-    # a force to keep two ligands aligned
-    # keeps ref atoms 1 near each other when offset is added
-    #    lig2 is assumed to be translated by offset relative to lig1
-    #     (lig2pos = lig1pos + offset)
-    # keeps theta angle near zero
-    # keeps psi angle near zero (assuming theta is near zero)
     def addAlignmentForce(self,
                           liga_ref_particles = None, ligb_ref_particles = None,
                           kfdispl = 0.0 * kilocalorie_per_mole/angstrom**2,
                           ktheta = 0.0 * kilocalorie_per_mole,
                           kpsi = 0.0 * kilocalorie_per_mole,
                           offset = [0., 0., 0.] * angstrom):
+        """
+        Adds Forces to keep two ligands aligned based on reference frames defined by two sets of 3 reference atoms
+        (a1, a2, a3) and (b1, b2, b3) for ligands a and b, respectively.
 
+        See https://pubs.acs.org/doi/10.1021/acs.jcim.1c01129
+
+        Adds a quadratic potential on the a1-b1 distance, minus an offset
+
+        Adds a potential of the form  k [ 1 - cos(theta) ], theta being the angle between the "z" axes of the two ligands,
+        defined by the a2-a1 and b2-b1 distances, to keep the axes of the two ligands aligned.
+
+        A potential of the form  k [ 1 - cos(psi) ], psi being the dihdral angle between the planes a3-a1-b2 and a1-b2-b3
+        to keep the "roll" of the two ligands in alignment. This potential is symmetrized with respect to the
+        exchange of ligand labels a and b.
+
+        Parameters
+        ----------
+        liga_ref_particles : list of 3 ints
+            List of the indexes of the reference atoms the first ligand
+        ligb_ref_particles : list of 3 ints
+            List of the indexes of the reference atoms of the second ligand
+        kfdispl : Quantity in energy/distance^2 units
+            Force constant of the quadratic potential
+        ktheta : Quantity in energy units
+            Height of the 1-cos(theta) restraint potential for the angle restraint
+        kpsi : Quantity in energy units
+            Height of the 1-cos(psi) restraint potential for the dihedral angle restraint
+        offset : List of 3 Quantity's in distance units
+            Center of the restraint. The potential is applied to the a1-b1 distance after subtracting offset.
+            It is used to keep the a1-b1 distance near offset.
+
+        Returns
+        -------
+        A tuple of OpenMM Forces with the displacement, the angle, and dihedral restraint.
+
+        """
+        
         if liga_ref_particles and ligb_ref_particles:
             if not (len(liga_ref_particles) == 3 and len(ligb_ref_particles) == 3):
                 raise ValueError("Invalid lists of reference atoms")
@@ -371,13 +454,88 @@ class ATMMetaForceUtils(object):
                          np.array([0.5*kpsi/kilojoule_per_mole], dtype=np.double) )
         return (displforce, thetaforce, psiforce )
 
-    # restrain angle between alignment z-axes defined by centroids
-    # similar to AlignmentForce but for centroids
     def addVsiteRestraintForceCMAngles(self,
                     lig_cm_groups = None, rcpt_cm_groups = None,
                     ktheta = None, theta0 = None, thetatol = None,
                     kphi = None, phi0 = None, phitol = None, 
                     kpsi = None, psi0 = None, psitol = None):
+
+        """Add orientation restraining potentials between ligand and receptor.
+
+        It is used in conjunction with addVsiteRestraintForceCMCM() to
+        define the spatial and angular extent of the receptor binding
+        site.
+
+        The orientation of the ligand with respect to the receptor is
+        defined with respect to a Cartesian reference frame fixed on
+        the receptor defined by 3, non co-linear, reference points
+        (r1, r2, r3) determined by the centroids of 3 given groups of
+        atoms of the receptor.  r1 defines the origin of the frame,
+        the distance r2-r1 defines the z-axis of the frame, and the
+        r3-r2-r1 plane defines the xz plane of the frame.  Similarly,
+        the frame of the ligand is defined by 3 reference points (l1,
+        l2, l3) determined by the centroids of 3 groups of atoms of
+        the ligand molecule.
+
+        The orientation angles defined below are those between the
+        elements of the frame of the ligand with respect to the frame
+        of the receptor when the two frames are shifted to a common
+        origin such that r1 and l1 are both at (0,0,0).
+
+        The theta angle is defined by the angle between the z-axes of
+        the two frames, that is the angle between r2-r1 and l2-l1
+        directions.
+
+        The phi angle is the dihedral between the r3-r2-r1 plane and
+        the r2-l1-l2 plane. That is, essentially, the azimuthal
+        spherical polar angle of the l2-l1 ligand axis with respect to
+        frame fixed on the receptor.
+
+        The psi angle is the dihedral between the r2-r1-l2 plane and
+        the l1-l2-l3 plane. That is, the torsional angle of the r2,
+        l1=r1, l2, l3 points, or the "twist" around the z-axis of the
+        ligand.
+
+        The restraint potential added for each angle above (theta,
+        phi, psi) is a flat-bottom quadratic potential defined by
+        a center, force constant, and tolerance. The potential for
+        theta is in terms of cos(theta). The potentials for phi
+        and psi have a periodicity of 2pi.
+
+        Parameters
+        ----------
+        lig_cm_groups: list of list of ints, such as [ [0,1], [2], [3] ]
+            Each element of this list is the set of atom indexes of the ligand whose centroids 
+            define the reference points l1, l2, and l3, respectively.
+        rcpt_cm_groups : list of list of ints, such as [ [4,5], [6], [7] ]
+            Each element of this list is the set of atom indexes of the receptor whose centroids 
+            define the reference points r1, r2, and r3, respectively.
+        ktheta : Quantity in energy units
+            Force constant of the quadratic potential for cos(theta)
+        theta0 : Quantity in angle units
+            The cosine of this angle is the center of the flat-bottom potential for cos(theta)
+        thetatol : Quantity in angle units
+            Defines the tolerance of the flat-bottom potential for cos(theta) in terms
+            of cos(theta0+-thetatol)
+        kphi : Quantity in (energy/angle^2) units
+            Force constant of the quadratic potential for the phi angle
+        phi0 : Quantity in angle units
+            The center of the flat-bottom potential for the phi angle
+        phitol : Quantity in angle units
+            Tolerance of the flat-bottom potential for the phi angle
+        kpsi : Quantity in (energy/angle^2) units
+            Force constant of the quadratic potential for the psi angle
+        psi0 : Quantity in angle units
+            The center of the flat-bottom potential for the psi angle
+        psitol : Quantity in angle units
+            Tolerance of the flat-bottom potential for the psi angle
+
+        Returns
+        -------
+        A tuple of OpenMM Forces for the theta, phi, and psi restraints, respectively.
+
+        """
+
         assert len(lig_cm_groups) == 3
         assert len(rcpt_cm_groups) == 3
 
@@ -445,11 +603,11 @@ class ATMMetaForceUtils(object):
             else:
                 phiforce = self.CMAnglePhiForce
                 numphigroups = phiforce.getNumGroups()
-            phiforce.addGroup(rcpt_cm_groups[0])
-            phiforce.addGroup(rcpt_cm_groups[1])
-            phiforce.addGroup(rcpt_cm_groups[2])
-            phiforce.addGroup( lig_cm_groups[0])
-            phiforce.addGroup( lig_cm_groups[1])
+            phiforce.addGroup(rcpt_cm_groups[0])#1
+            phiforce.addGroup(rcpt_cm_groups[1])#2
+            phiforce.addGroup(rcpt_cm_groups[2])#3
+            phiforce.addGroup( lig_cm_groups[0])#4
+            phiforce.addGroup( lig_cm_groups[1])#5
             kf = kphi/(kilojoule_per_mole/radians**2)
             a0 = (phi0-phitol)/radians
             b0 = (phi0+phitol)/radians
@@ -481,11 +639,11 @@ class ATMMetaForceUtils(object):
             else:
                 psiforce = self.CMAnglePsiForce
                 numpsigroups = psiforce.getNumGroups()
-            psiforce.addGroup(rcpt_cm_groups[0])
-            psiforce.addGroup(rcpt_cm_groups[1])
-            psiforce.addGroup( lig_cm_groups[0])
-            psiforce.addGroup( lig_cm_groups[1])
-            psiforce.addGroup( lig_cm_groups[2])
+            psiforce.addGroup(rcpt_cm_groups[0])#1
+            psiforce.addGroup(rcpt_cm_groups[1])#2
+            psiforce.addGroup( lig_cm_groups[0])#3
+            psiforce.addGroup( lig_cm_groups[1])#4
+            psiforce.addGroup( lig_cm_groups[2])#5
             kf = kpsi/(kilojoule_per_mole/radians**2)
             a0 = (psi0-psitol)/radians
             b0 = (psi0+psitol)/radians
@@ -493,8 +651,30 @@ class ATMMetaForceUtils(object):
             psiforce.addBond(groupids, np.array([kf, a0, b0], dtype=np.double) )
         return (thetaforce, phiforce, psiforce)
 
-    # applies flat-bottom restraints to a set of atoms based on a set of reference positions
     def addPosRestraints(self, particles, refpos, fc = 25.0 * kilocalorie_per_mole/angstrom**2, tol = 0.5 * angstrom, periodic = True):
+        """
+        Applies flat-bottom, quadratic position restraints to a set of
+        atoms based on a set of reference positions.
+
+        Parameters
+        ----------
+        particles: list of ints
+            List of the indexes of the atoms to restrain
+        refpos : list of Vec3
+            Centers of the flat-bottom restraints. These are reference 
+            positions for all atoms of the system, 
+            not just those that are restrained.
+        fc : Quantitiy in (energy/distance^2) units
+            Force constant of the quadratic flat-bottom potential
+        tol : Quantity in distance units
+            Tolerance of the quadratic flat-bottom potential
+
+        Returns
+        -------
+        The Force added to the System
+
+        """
+
         if not particles or len(particles) == 0:
             return None
         if periodic:
@@ -520,7 +700,25 @@ class ATMMetaForceUtils(object):
         return posrestforce
 
     #fix zero LJs
-    def fixZeroLJParams(self, force):
+    def fixZeroLJParams(self, force, minsigma = 0.1 * angstrom, minepsilon = 1.e-4 * kilocalories_per_mole):
+        """
+        Set the Lennard-Jones parameters to some minimum values
+
+        This is used for unphysical force fields that do not have
+        a ground state because of "naked" charge centers that can
+        sit on other charge centers without penalty.
+
+        Parameters
+        ----------
+        force : OpenMM force
+            Non-bonded Force to operate upon, other Forces are skipped
+        minsigma : Quantity in distance units
+            Minimum value of the sigma LJ parameter to assign
+        minepsilone : Quantity in energy units
+            Minimum value of the epsilon LJ parameter to assign
+
+        """
+
         small = 1.0e-6
         if isinstance(force, mm.NonbondedForce):
             for i in range(force.getNumParticles()):
@@ -529,8 +727,8 @@ class ATMMetaForceUtils(object):
                 sigmaLJ = nbparam[1]
                 epsilonLJ = nbparam[2]
                 if sigmaLJ._value < small and epsilonLJ._value < small:
-                    sigmaLJ = 0.1 * angstrom
-                    epsilonLJ = 1.e-4 * kilocalories_per_mole
+                    sigmaLJ = minsigma
+                    epsilonLJ = minepsilon
                     force.setParticleParameters(i, charge, sigmaLJ, epsilonLJ)
 
 %}
