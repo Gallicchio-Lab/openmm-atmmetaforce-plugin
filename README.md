@@ -1,4 +1,5 @@
-# Alchemical Transfer Method Meta-Force OpenMM Plugin {#mainpage}
+#### {#mainpage}
+# Alchemical Transfer Method Meta-Force OpenMM Plugin
 
 An OpenMM plugin that implements the Alchemical Transfer Potential (ATM) for absolute and relative binding free energy calculations. 
 
