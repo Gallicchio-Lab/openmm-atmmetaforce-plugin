@@ -6,10 +6,11 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/common/BondedUtilities.h"
 #include "openmm/common/ComputeForceInfo.h"
+#include "openmm/common/ContextSelector.h" // requires OpenMM 7.7+
 #include <cmath>
 
 //DEBUG
-#include <iostream>
+//#include <iostream>
 
 using namespace ATMMetaForcePlugin;
 using namespace OpenMM;
@@ -75,7 +76,7 @@ CommonCalcATMMetaForceKernel::~CommonCalcATMMetaForceKernel() {
 }
 
 void CommonCalcATMMetaForceKernel::initialize(const System& system, const ATMMetaForce& force) {
-
+  ContextSelector selector(cc); //requires OpenMM 7.7+
   numParticles = force.getNumParticles();
   if (numParticles == 0)
     return;
@@ -154,6 +155,9 @@ double CommonCalcATMMetaForceKernel::execute(OpenMM::ContextImpl& context,
 					     OpenMM::ContextImpl& innerContext1, OpenMM::ContextImpl& innerContext2,
 					     double State1Energy, double State2Energy,
 					     bool includeForces, bool includeEnergy ) {
+  ContextSelector selector(cc); // requires OpenMM 7.7+
+  //cc.setAsCurrent(); //OpenMM 7.6
+
   initkernels(context, innerContext1, innerContext2);
 
   //softplus parameters
@@ -201,6 +205,8 @@ double CommonCalcATMMetaForceKernel::execute(OpenMM::ContextImpl& context,
 
 void CommonCalcATMMetaForceKernel::copyState(OpenMM::ContextImpl& context,
 					     OpenMM::ContextImpl& innerContext1, OpenMM::ContextImpl& innerContext2) {
+  ContextSelector selector(cc); // requires OpenMM 7.7
+
   initkernels(context, innerContext1, innerContext2);
 
   CopyStateKernel->execute(numParticles);
