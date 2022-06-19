@@ -33,6 +33,6 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#define ATMMETAFORCE_VERSION "0.3.0"
+#define ATMMETAFORCE_VERSION "0.3.1"
 
 #endif /*OPENMM_ATMMETAFORCE_VERSION_H_*/
