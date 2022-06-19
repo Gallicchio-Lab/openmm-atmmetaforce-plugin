@@ -29,7 +29,7 @@ Support from the National Science Foundation [CAREER 1750511](https://www.nsf.go
 
 ## Requirements
 
-OpenMM 7.5.0 or later. Tested with OpenMM 7.5.0 and 7.6.0.
+OpenMM 7.7. Releases prior to 0.3.1 support 7.5.0 and 7.6.0.
 
 ## License
 
