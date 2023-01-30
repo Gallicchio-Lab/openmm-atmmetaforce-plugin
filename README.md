@@ -130,7 +130,7 @@ id to it, then add all of the particles to it with their displacement transforma
 minimization/MD as usual telling the Integrator to consider only the ATMMetaForce and the Forces not 
 managed by the ATMMetaForce.
 
-For example, the following excerpt (see the `examples`) sets up a transformation in which a a ligand
+For example, the following excerpt (see the `examples`) sets up a transformation in which a ligand
 (atoms 0, 1, 2, 3, 4) is displaced by 22 Angstroms in the each of the x, y, z directions and simulates
 at the midpoint of the transformation (lambda = 1/2). The non-bonded force
 is placed in Force group 1 and is recalculated before and after the transformation. Forces, such as as the bonded Forces,
