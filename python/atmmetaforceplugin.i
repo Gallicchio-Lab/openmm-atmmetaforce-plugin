@@ -1,5 +1,6 @@
 %module atmmetaforce
 
+%include "factory.i" /* Fix for SWIG >= 4.1*/
 %import(module="simtk.openmm") "swig/OpenMMSwigHeaders.i"
 %include "swig/typemaps.i"
 %include <std_string.i>
