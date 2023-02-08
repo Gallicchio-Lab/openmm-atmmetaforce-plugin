@@ -1,8 +1,6 @@
-from distutils.core import setup
-from distutils.extension import Extension
 import os
-import sys
 import platform
+from setuptools import Extension, setup
 
 openmm_dir = '@OPENMM_DIR@'
 atmmetaforce_header_dir = '@ATMMETAFORCEPLUGIN_HEADER_DIR@'
