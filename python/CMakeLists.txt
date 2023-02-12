@@ -25,3 +25,10 @@ add_custom_command(TARGET PythonInstall
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
 )
 
+#tests
+file(COPY ${CMAKE_SOURCE_DIR}/python/tests DESTINATION ${CMAKE_BINARY_DIR}/python )
+add_custom_target(CopyTestFiles ALL DEPENDS ${CMAKE_BINARY_DIR}/python/tests )
+add_test(NAME abfe
+COMMAND pytest WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/python/tests/
+)
+
