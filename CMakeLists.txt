@@ -31,17 +31,20 @@ ENDIF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
-#SET(ATMMETAFORCE_PLUGIN_SOURCE_SUBDIRS openmmapi serialization)
-SET(ATMMETAFORCE_PLUGIN_SOURCE_SUBDIRS openmmapi)
+SET(ATMMETAFORCE_PLUGIN_SOURCE_SUBDIRS openmmapi serialization)
 
 # Set the library name
 SET(ATMMETAFORCE_LIBRARY_NAME ATMMetaForcePlugin)
 SET(SHARED_ATMMETAFORCE_TARGET ${ATMMETAFORCE_LIBRARY_NAME})
 
 # These are all the places to search for header files which are to be part of the API.
-SET(API_INCLUDE_DIRS "openmmapi/include" "openmmapi/include/internal")
+SET(API_INCLUDE_DIRS)
+FOREACH(dir ${ATMMETAFORCE_PLUGIN_SOURCE_SUBDIRS})
+    SET(API_INCLUDE_DIRS ${API_INCLUDE_DIRS}
+            ${CMAKE_CURRENT_SOURCE_DIR}/${dir}/include
+            ${CMAKE_CURRENT_SOURCE_DIR}/${dir}/include/internal)
+ENDFOREACH(dir)
 
-# Locate header files.
 SET(API_INCLUDE_FILES)
 FOREACH(dir ${API_INCLUDE_DIRS})
     FILE(GLOB fullpaths ${dir}/*.h)
@@ -113,6 +116,12 @@ IF ( EXISTS ${OPENMM_DIR}/lib/plugins/libOpenMMHIP.so )
 ELSE()
    SET(ATMMETAFORCE_BUILD_HIP_LIB OFF CACHE BOOL "Build implementation for HIP")
 ENDIF( )
+
+# Serialization support
+
+ADD_SUBDIRECTORY(serialization)
+FILE(GLOB serialization_files  ${CMAKE_SOURCE_DIR}/serialization/src/*.cpp)
+SET_SOURCE_FILES_PROPERTIES(${serialization_files} PROPERTIES COMPILE_FLAGS "-DATMMETAFORCE_BUILDING_SHARED_LIBRARY -DIEEE_8087")
 
 # Build the Python API
 
