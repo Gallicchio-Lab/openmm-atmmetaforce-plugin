@@ -25,7 +25,7 @@ void ATMMetaForceProxy::serialize(const void* object, OpenMM::SerializationNode&
     node.setDoubleProperty("aCore", force.getDefaultAcore());
     node.setDoubleProperty("direction", force.getDefaultDirection());
 
-    OpenMM::SerializationNode& variableForceGroups = node.createChildNode("GlobalParameters");
+    OpenMM::SerializationNode& variableForceGroups = node.createChildNode("VariableForceGroups");
     for (const auto i : force.getVariableForceGroups()) {
         variableForceGroups.createChildNode("Parameter").setIntProperty("group", i);
     }
@@ -47,7 +47,7 @@ void* ATMMetaForceProxy::deserialize(const OpenMM::SerializationNode& node) cons
     try {
         std::vector<int> variableForceGroups;
 
-        const OpenMM::SerializationNode& globalParams = node.getChildNode("GlobalParameters");
+        const OpenMM::SerializationNode& globalParams = node.getChildNode("VariableForceGroups");
         for (auto& parameter : globalParams.getChildren())
             variableForceGroups.push_back(parameter.getIntProperty("group"));
 
