@@ -33,6 +33,7 @@ class ATMMetaForceUtils(object):
         self.CMAngleThetaForce = None
         self.CMAnglePhiForce = None
         self.CMAnglePsiForce = None
+        self.TorsionalRestraintForce = None
 
         self.major_ommversion = int(ommversion.version.split(".")[0])
         self.minor_ommversion = int(ommversion.version.split(".")[1])
@@ -218,6 +219,58 @@ class ATMMetaForceUtils(object):
             expr += self._diffvExpression("x"+v2, "y"+v2, "z"+v2, x3, y3, z3, x2, y2, z2) + " ; "
             expr += self._diffvExpression("x"+v3, "y"+v3, "z"+v3, x4, y4, z4, x3, y3, z3)
             return expr
+
+    # (kf/2) (phi - phi0)^2 with a tolerance and periodicity
+    def addTorsionalRestraintForce(self, particles, kphi, phi0, phitol):
+        """Add a torsional restraint to the system.
+
+        The restraint is a flat-bottom quadratic potential defined by
+        a center, force constant, and tolerance. The potential has 2pi periodicity.
+
+        Parameters
+        ----------
+        particles: list of ints
+            The indexes of the four particles that define the torsional angle
+        kphi : Quantity in (energy/angle^2) units
+            Force constant of the quadratic potential
+        phi0 : Quantity in angle units
+            The center of the flat-bottom potential
+        phitol : Quantity in angle units
+            Tolerance of the flat-bottom potential
+
+        Returns
+        -------
+        The reference to the CustomTorsionForce added to the system
+
+        """
+        phiforce = None
+        numtorsions = 0
+
+        expr  = "0.5*kf*( step(dm0)*max(0,db0)^2 + step(-dm0)*max(0,-da0)^2 ) ; "
+        expr += self._wrapExpression("db0", "xb0", "twopi") + " ; xb0 = theta - b0 ; "
+        expr += self._wrapExpression("da0", "xa0", "twopi") + " ; xa0 = theta - a0 ; "
+        expr += self._wrapExpression("dm0", "xm0", "twopi") + " ; xm0 = theta - mid0 ; mid0 = (a0 + b0)/2 ; "
+        expr += "twopi = 2*pi ;"
+        expr += "pi = %f" % math.pi
+
+        if self.TorsionalRestraintForce == None:
+            self.TorsionalRestraintForce = mm.CustomTorsionForce(expr)
+            phiforce = self.TorsionalRestraintForce
+            phiforce.addPerTorsionParameter("kf")
+            phiforce.addPerTorsionParameter("a0")
+            phiforce.addPerTorsionParameter("b0")
+            self.system.addForce(phiforce)
+            numtorsions = 0
+        else:
+            phiforce = self.TorsionalRestraintForce
+            numtorsions = phiforce.getNumTorsions()
+
+        kf = kphi/(kilojoule_per_mole/radians**2)
+        a0 = (phi0-phitol)/radians
+        b0 = (phi0+phitol)/radians
+        phiforce.addTorsion(particles[0], particles[1], particles[2], particles[3], np.array([kf, a0, b0], dtype=np.double))
+
+        return phiforce
 
     # ** UNTESTED **
     # Adds Boresch-style Vsite restraints [J. Phys. Chem. B, Vol. 107, No. 35, 2003]
