@@ -130,7 +130,7 @@ simulation.context.setParameter(atmforce.W0(), w0coeff /kilojoules_per_mole)
 simulation.context.setParameter(atmforce.Umax(), umsc /kilojoules_per_mole)
 simulation.context.setParameter(atmforce.Ubcore(), ubcore /kilojoules_per_mole)
 simulation.context.setParameter(atmforce.Acore(), acore)
-simulation.context.setParameter(atmforce.Direction(), acore)
+simulation.context.setParameter(atmforce.Direction(), direction)
 
 state = simulation.context.getState(getEnergy = True, groups = {0,atmforcegroup})
 print("Potential Energy =", state.getPotentialEnergy())
